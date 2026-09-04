@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    GamebuinoAKA.Core — couche MÉTIER PORTABLE.
+    Règle absolue : AUCUNE dépendance UI (ni WPF, ni Avalonia),
+    ni System.Drawing.Common, ni chemins/outils Windows-only.
+    Testable sans fenêtre.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>GamebuinoAKA.Core</RootNamespace>
+    <AssemblyName>GamebuinoAKA.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MVVM (nouveau nom : CommunityToolkit, remplace Microsoft.Toolkit.Mvvm) -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!-- Sérialisation : Newtonsoft conservé pour faciliter la migration -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- SkiaSharp sera ajouté lors de la migration d'AssetService (pipeline image). -->
+  </ItemGroup>
+
+</Project>
