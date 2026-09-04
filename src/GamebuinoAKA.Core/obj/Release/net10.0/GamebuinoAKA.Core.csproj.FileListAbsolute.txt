@@ -1,0 +1,13 @@
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\obj\Release\net10.0\GamebuinoAKA.Core.csproj.AssemblyReference.cache
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\obj\Release\net10.0\GamebuinoAKA.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\obj\Release\net10.0\GamebuinoAKA.Core.AssemblyInfoInputs.cache
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\obj\Release\net10.0\GamebuinoAKA.Core.AssemblyInfo.cs
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\obj\Release\net10.0\GamebuinoAKA.Core.csproj.CoreCompileInputs.cache
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\bin\Release\net10.0\GamebuinoAKA.Core.deps.json
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\bin\Release\net10.0\GamebuinoAKA.Core.dll
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\bin\Release\net10.0\GamebuinoAKA.Core.pdb
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\obj\Release\net10.0\GamebuinoAKA.Core.sourcelink.json
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\obj\Release\net10.0\GamebuinoAKA.Core.dll
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\obj\Release\net10.0\refint\GamebuinoAKA.Core.dll
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\obj\Release\net10.0\GamebuinoAKA.Core.pdb
+C:\Users\jean_\.bob\playground\GamebuinoAKA.IDE_Linux\src\GamebuinoAKA.Core\obj\Release\net10.0\ref\GamebuinoAKA.Core.dll

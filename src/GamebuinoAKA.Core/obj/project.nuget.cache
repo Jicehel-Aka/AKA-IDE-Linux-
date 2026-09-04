@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "w9Pb4uvMNko=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\jean_\\.bob\\playground\\GamebuinoAKA.IDE_Linux\\src\\GamebuinoAKA.Core\\GamebuinoAKA.Core.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\jean_\\.nuget\\packages\\communitytoolkit.mvvm\\8.4.2\\communitytoolkit.mvvm.8.4.2.nupkg.sha512",
+    "C:\\Users\\jean_\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\10.0.11\\microsoft.extensions.dependencyinjection.10.0.11.nupkg.sha512",
+    "C:\\Users\\jean_\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.11\\microsoft.extensions.dependencyinjection.abstractions.10.0.11.nupkg.sha512"
+  ],
+  "logs": []
+}
