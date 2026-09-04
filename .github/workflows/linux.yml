@@ -35,17 +35,21 @@ jobs:
 
       - name: Reject WPF dependencies in Core
         run: |
-          if grep -R -n -E "System\.Windows|PresentationFramework|PresentationCore|WindowsBase" src/GamebuinoAKA.Core; then
+          set -e
+
+          if git grep -n -E \
+            "System\.Windows|PresentationFramework|PresentationCore|WindowsBase" \
+            -- \
+            ':(glob)src/GamebuinoAKA.Core/**/*.cs' \
+            ':(glob)src/GamebuinoAKA.Core/**/*.csproj' \
+            ':(glob)src/GamebuinoAKA.Core/**/*.props' \
+            ':(glob)src/GamebuinoAKA.Core/**/*.targets'
+          then
             echo "ERREUR : dépendance WPF détectée dans GamebuinoAKA.Core."
             exit 1
           fi
 
-      - name: Reject WPF dependencies in Core
-        run: |
-          if grep -R -n -E "System\.Windows|PresentationFramework|PresentationC>
-            echo "ERREUR : dépendance WPF détectée dans GamebuinoAKA.Core."
-            exit 1
-          fi
+          echo "OK : aucune dépendance WPF trouvée dans le code Core."
 
       - name: Build
         run: dotnet build GamebuinoAKA.sln --configuration Release --no-restore
