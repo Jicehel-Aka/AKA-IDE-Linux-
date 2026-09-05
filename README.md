@@ -1,28 +1,3 @@
-Oui : le README actuel décrit la version historique WPF/Windows. Dans le dépôt Linux, il faut le remplacer par une documentation qui :
-
-- présente le portage Avalonia ;
-- indique clairement que la migration est en cours ;
-- ne promet pas encore toutes les fonctions si elles ne sont pas migrées ;
-- documente Linux, PlatformIO CLI et GitHub Actions ;
-- conserve le lien avec `legacy-wpf/`.
-
-Voici un `README.md` prêt à utiliser pour la branche `avalonia`.
-
----
-
-## Remplacer le README
-
-Depuis :
-
-```bash
-cd ~/.bob/playground/GamebuinoAKA.IDE_Linux
-git checkout avalonia
-nano README.md
-```
-
-Supprime le contenu existant et colle ceci :
-
-````markdown
 # Gamebuino AKA IDE — Avalonia Edition
 
 [![Build and test Linux](https://github.com/Jicehel-Aka/AKA-IDE-Linux-/actions/workflows/linux.yml/badge.svg?branch=avalonia)](https://github.com/Jicehel-Aka/AKA-IDE-Linux-/actions/workflows/linux.yml)
