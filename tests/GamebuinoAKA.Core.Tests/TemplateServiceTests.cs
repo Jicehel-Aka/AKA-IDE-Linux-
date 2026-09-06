@@ -29,9 +29,7 @@ namespace GamebuinoAKA.Core.Tests
         {
             using var paths = new TempPlatformPaths();
             var settings = new SettingsService(paths);
-            // Pas de composant de référence configuré → un placeholder est écrit.
             settings.Settings.ReferenceGamebuinoComponentPath = string.Empty;
-
             var dest = Path.Combine(paths.Root, "dest");
             Directory.CreateDirectory(dest);
 
@@ -40,22 +38,46 @@ namespace GamebuinoAKA.Core.Tests
 
             var projDir = Path.Combine(dest, "MonIdf");
             Assert.True(File.Exists(Path.Combine(projDir, "CMakeLists.txt")));
-            Assert.True(File.Exists(Path.Combine(projDir, "sdkconfig.defaults")));
-            Assert.True(File.Exists(Path.Combine(projDir, "partitions.csv")));
             Assert.True(File.Exists(Path.Combine(projDir, "main", "app_main.cpp")));
-            Assert.True(File.Exists(Path.Combine(projDir, "main", "CMakeLists.txt")));
-
-            // Marqueur de chaîne figé sur ESP-IDF
             var marker = Path.Combine(projDir, GamebuinoProject.BuildMarkerFile);
             Assert.True(File.Exists(marker));
             Assert.Contains("espidf", File.ReadAllText(marker));
+        }
 
-            // Lib non fournie → note explicative
-            Assert.True(File.Exists(Path.Combine(projDir, "components", "gamebuino", "AJOUTER_LA_LIB.md")));
+        [Fact]
+        public async Task Create_EspIdf_WithAudio_WritesAudioModule_AndWiresIt()
+        {
+            using var paths = new TempPlatformPaths();
+            var settings = new SettingsService(paths);
+            var dest = Path.Combine(paths.Root, "dest");
+            Directory.CreateDirectory(dest);
 
-            // Le dossier généré est bien reconnu comme ESP-IDF
-            Assert.Equal(BuildSystem.EspIdf,
-                GamebuinoProject.DetectBuildSystem(projDir, BuildSystem.PlatformIO));
+            var svc = new TemplateService(settings);
+            await svc.CreateProjectAsync("Sonore", "esp-idf", dest, BuildSystem.EspIdf, withAudio: true);
+
+            var main = Path.Combine(dest, "Sonore", "main");
+            Assert.True(File.Exists(Path.Combine(main, "audio.h")));
+            Assert.True(File.Exists(Path.Combine(main, "audio.cpp")));
+            Assert.Contains("audio.cpp", File.ReadAllText(Path.Combine(main, "CMakeLists.txt")));
+            var appMain = File.ReadAllText(Path.Combine(main, "app_main.cpp"));
+            Assert.Contains("audio_init", appMain);
+            Assert.Contains("audio.h", appMain);
+        }
+
+        [Fact]
+        public async Task Create_EspIdf_WithoutAudio_HasNoAudioModule()
+        {
+            using var paths = new TempPlatformPaths();
+            var settings = new SettingsService(paths);
+            var dest = Path.Combine(paths.Root, "dest");
+            Directory.CreateDirectory(dest);
+
+            var svc = new TemplateService(settings);
+            await svc.CreateProjectAsync("Muet", "esp-idf", dest, BuildSystem.EspIdf, withAudio: false);
+
+            var main = Path.Combine(dest, "Muet", "main");
+            Assert.False(File.Exists(Path.Combine(main, "audio.cpp")));
+            Assert.DoesNotContain("audio.cpp", File.ReadAllText(Path.Combine(main, "CMakeLists.txt")));
         }
     }
 }

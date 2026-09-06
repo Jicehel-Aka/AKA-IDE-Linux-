@@ -19,13 +19,13 @@ namespace GamebuinoAKA.Core.Services
         /// PlatformIO (Arduino + lib jmp42) ou ESP-IDF (composants CMake + coquille).
         /// </summary>
         public async Task CreateProjectAsync(string projectName, string template,
-            string destinationFolder, BuildSystem buildSystem)
+            string destinationFolder, BuildSystem buildSystem, bool withAudio = false)
         {
             var projectDir = Path.Combine(destinationFolder, projectName);
             Directory.CreateDirectory(projectDir);
 
             if (buildSystem == BuildSystem.EspIdf)
-                await CreateEspIdfProjectAsync(projectName, projectDir);
+                await CreateEspIdfProjectAsync(projectName, projectDir, withAudio);
             else
                 await CreatePlatformIOProjectAsync(projectName, template, projectDir);
         }
@@ -155,7 +155,7 @@ void gameRender(Gamebuino& gb) {
         //  ESP-IDF (composants CMake + coquille)
         // ═══════════════════════════════════════════════════════════════════════
 
-        private async Task CreateEspIdfProjectAsync(string projectName, string projectDir)
+        private async Task CreateEspIdfProjectAsync(string projectName, string projectDir, bool withAudio)
         {
             var mainDir = Path.Combine(projectDir, "main");
             var vscodeDir = Path.Combine(projectDir, ".vscode");
@@ -170,9 +170,14 @@ void gameRender(Gamebuino& gb) {
             await Write(projectDir, "partitions.csv", IdfPartitions());
             await Write(projectDir, "README.md", IdfProjectReadme(projectName));
 
-            await Write(mainDir, "CMakeLists.txt", IdfMainCMake());
-            await Write(mainDir, "app_main.cpp", IdfAppMain(projectName));
+            await Write(mainDir, "CMakeLists.txt", IdfMainCMake(withAudio));
+            await Write(mainDir, "app_main.cpp", IdfAppMain(projectName, withAudio));
             await Write(mainDir, "game_module.h", IdfGameModuleH());
+            if (withAudio)
+            {
+                await Write(mainDir, "audio.h", IdfAudioHeader());
+                await Write(mainDir, "audio.cpp", IdfAudioSource());
+            }
 
             await Write(vscodeDir, "settings.json", IdfVsCodeSettings());
             await Write(vscodeDir, "extensions.json", ExtensionsJson(true));
@@ -239,10 +244,11 @@ storage,  data, fat,      ,         0x200000
 
         // main/CMakeLists.txt — RAPPEL convention : les composants dans REQUIRES,
         // jamais dans INCLUDE_DIRS.
-        private static string IdfMainCMake() =>
+        private static string IdfMainCMake(bool withAudio) =>
 @"idf_component_register(
     SRCS
-        app_main.cpp
+        app_main.cpp" + (withAudio ? @"
+        audio.cpp" : "") + @"
 
     INCLUDE_DIRS
         .
@@ -253,45 +259,111 @@ storage,  data, fat,      ,         0x200000
 )
 ";
 
-        private static string IdfAppMain(string projectName) =>
+        private static string IdfAppMain(string projectName, bool withAudio) =>
 @"/*
 ===============================================================================
   app_main.cpp — " + projectName + @" (Gamebuino AKA, ESP-IDF)
 -------------------------------------------------------------------------------
   Squelette MINIMAL mono-tâche : init du core + boucle d'affichage.
-
-  Pour un vrai jeu, reprends l'architecture « coquille » de tes projets :
-    - SysTask  (CPU0, prio 6, 10 ms) : SEUL à appeler g_core.pool()
-    - AudioTask(CPU0, prio 5)
-    - AiTask   (CPU0, prio 4)
-    - GameTask (CPU1, prio 5, 30 fps) : entrées (cache), logique, rendu
-  et n'implémente qu'un GameModule (voir game_module.h).
 ===============================================================================
 */
 #include ""freertos/FreeRTOS.h""
 #include ""freertos/task.h""
-#include ""gamebuino.h""   // umbrella : gb_core, gb_graphics, audio
-
+#include ""gamebuino.h""
+" + (withAudio ? "#include \"\"audio.h\"\"   // support audio (activé à la création)\n" : "") + @"
 gb_core     g_core;
 gb_graphics gfx;
 
 extern ""C"" void app_main(void)
 {
     g_core.init();
-
-    const uint16_t bg = gfx.makeColor(20, 16, 40);    // violet sombre
-    const uint16_t fg = gfx.makeColor(255, 255, 255); // blanc
+" + (withAudio ? "    audio_init();   // démarre la tâche audio (mixeur)\n" : "") + @"
+    const uint16_t bg = gfx.makeColor(20, 16, 40);
+    const uint16_t fg = gfx.makeColor(255, 255, 255);
 
     while (true) {
+        g_core.pool();
+" + (withAudio ? "        if (g_core.buttons.pressed(gb_buttons::KEY_A)) audio_beep(880, 80);\n" : "") + @"
         gfx.clear(bg);
         gfx.setColor(fg);
         gfx.move_cursor(16, 16);
         gfx.print_str(""" + projectName + @""");
         gfx.move_cursor(16, 40);
         gfx.print_str(""Hello Gamebuino AKA!"");
+" + (withAudio ? "        gfx.move_cursor(16, 64);\n        gfx.print_str(\"\"Appuyez sur A pour un son\"\");\n" : "") + @"
         gfx.update();
-        vTaskDelay(pdMS_TO_TICKS(16));  // ~60 fps
+        vTaskDelay(pdMS_TO_TICKS(16));
     }
+}
+";
+
+        // Module audio minimal — mixeur SDK (4 pistes) + tâche FreeRTOS dédiée.
+        // Fidèle à main/core/audio.cpp de mAKArena (play_tone, add_track, pool).
+        private static string IdfAudioHeader() =>
+@"#pragma once
+#include <cstdint>
+
+// Support audio minimal. audio_init() est appelé une fois dans app_main.
+void audio_init();
+void audio_set_master_volume(uint8_t v);            // 0..255
+
+// Effet : glissando f0->f1 (Hz), volumes v0->v1 (0..1), durée ms.
+void audio_sfx(float f0, float f1, float v0, float v1, uint16_t ms);
+void audio_beep(float freq, uint16_t ms);           // bip simple
+void audio_music_note(float freq, uint16_t ms);     // note (piste musique)
+";
+
+        private static string IdfAudioSource() =>
+@"/*
+  audio.cpp — plomberie audio minimale (Gamebuino AKA, ESP-IDF).
+  Le mixeur (gb_audio_player) doit être pompé en continu : une tâche FreeRTOS
+  dédiée appelle g_player.pool(). Deux pistes : musique + effets.
+*/
+#include ""audio.h""
+#include ""gb_audio_player.h""
+#include ""gb_audio_track_tone.h""
+#include ""gb_ll_audio.h""
+#include ""freertos/FreeRTOS.h""
+#include ""freertos/task.h""
+
+static gb_audio_player     g_player;
+static gb_audio_track_tone g_music;
+static gb_audio_track_tone g_sfx;
+
+static void audio_task(void*)
+{
+    while (true) {
+        g_player.pool();
+        vTaskDelay(pdMS_TO_TICKS(2));
+    }
+}
+
+void audio_init()
+{
+    gb_ll_audio_set_volume(200);
+    g_player.add_track(&g_music);
+    g_player.add_track(&g_sfx);
+    g_music.set_track_volume(1.0f);
+    g_sfx.set_track_volume(1.0f);
+    // Le mixeur tourne dans sa propre tâche (CPU 0), en continu.
+    xTaskCreatePinnedToCore(audio_task, ""AudioTask"", 4096, nullptr, 5, nullptr, 0);
+}
+
+void audio_set_master_volume(uint8_t v) { gb_ll_audio_set_volume(v); }
+
+void audio_sfx(float f0, float f1, float v0, float v1, uint16_t ms)
+{
+    g_sfx.play_tone(f0, f1, v0, v1, ms, gb_audio_track_tone::SQUARE);
+}
+
+void audio_beep(float freq, uint16_t ms)
+{
+    g_sfx.play_tone(freq, freq, 0.60f, 0.10f, ms, gb_audio_track_tone::SQUARE);
+}
+
+void audio_music_note(float freq, uint16_t ms)
+{
+    g_music.play_tone(freq, freq, 0.45f, 0.05f, ms, gb_audio_track_tone::TRIANGLE);
 }
 ";
 

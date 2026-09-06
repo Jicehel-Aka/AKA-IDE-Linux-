@@ -20,6 +20,7 @@ namespace GamebuinoAKA.App.ViewModels
         [ObservableProperty] private string _destinationFolder = string.Empty;
         [ObservableProperty] private bool _isEspIdf = true;
         [ObservableProperty] private string _selectedTemplate = "empty";
+        [ObservableProperty] private bool _addAudio;
         [ObservableProperty] private string _status = string.Empty;
 
         public bool IsPlatformIO => !IsEspIdf;
@@ -39,7 +40,7 @@ namespace GamebuinoAKA.App.ViewModels
         {
             OnPropertyChanged(nameof(IsPlatformIO));
             if (value) SelectedTemplate = "esp-idf";
-            else if (SelectedTemplate == "esp-idf") SelectedTemplate = "empty";
+            else { SelectedTemplate = "empty"; AddAudio = false; }  // audio : ESP-IDF uniquement
         }
 
         [RelayCommand]
@@ -62,7 +63,7 @@ namespace GamebuinoAKA.App.ViewModels
             try
             {
                 var bs = IsEspIdf ? BuildSystem.EspIdf : BuildSystem.PlatformIO;
-                await _templates.CreateProjectAsync(ProjectName, SelectedTemplate, DestinationFolder, bs);
+                await _templates.CreateProjectAsync(ProjectName, SelectedTemplate, DestinationFolder, bs, IsEspIdf && AddAudio);
                 _settings.AddRecentProject(target);
                 await _dialogs.ShowMessageAsync("Projet créé", $"« {ProjectName} » a été créé.");
                 _nav.NavigateToProjects();

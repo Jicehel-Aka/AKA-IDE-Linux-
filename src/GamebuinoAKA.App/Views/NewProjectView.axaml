@@ -20,6 +20,12 @@
                 <ComboBox ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}" HorizontalAlignment="Left" MinWidth="200"/>
             </StackPanel>
 
+            <StackPanel IsVisible="{Binding IsEspIdf}" Margin="0,8,0,0">
+                <CheckBox Content="Ajouter le support audio (mixeur + tâche + module audio.h/.cpp)" IsChecked="{Binding AddAudio}"/>
+                <TextBlock Text="Génère la plomberie minimale : appuyez sur A dans le projet pour un bip. Utilisez audio_beep(), audio_sfx(), audio_music_note()."
+                           Foreground="#888" FontSize="11" TextWrapping="Wrap" Margin="24,2,0,0"/>
+            </StackPanel>
+
             <TextBlock Text="Dossier de destination" Margin="0,8,0,0"/>
             <Grid ColumnDefinitions="*,Auto">
                 <TextBox Grid.Column="0" Text="{Binding DestinationFolder}" Margin="0,0,8,0"/>

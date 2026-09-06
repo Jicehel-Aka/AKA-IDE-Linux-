@@ -6,10 +6,10 @@ namespace GamebuinoAKA.Core.Services
     public interface ITemplateService
     {
         /// <summary>
-        /// Crée un projet dans destinationFolder/projectName selon la chaîne de build
-        /// (PlatformIO Arduino, ou ESP-IDF composants CMake + coquille).
+        /// Crée un projet. Pour ESP-IDF, withAudio=true génère la plomberie audio
+        /// minimale (module audio.h/.cpp + tâche mixeur + init dans app_main).
         /// </summary>
         Task CreateProjectAsync(string projectName, string template,
-            string destinationFolder, BuildSystem buildSystem);
+            string destinationFolder, BuildSystem buildSystem, bool withAudio = false);
     }
 }
