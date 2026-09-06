@@ -6,7 +6,6 @@ using GamebuinoAKA.Core.Services;
 
 namespace GamebuinoAKA.App
 {
-    /// <summary>Racine de composition : construit services Core + services App + VM.</summary>
     public static class Bootstrapper
     {
         public static MainViewModel CreateMainViewModel()
@@ -25,12 +24,13 @@ namespace GamebuinoAKA.App
             var git      = new GitService(settings, runner, tools);
             var vscode   = new VSCodeService(settings, runner, tools);
             var launcher = new ApplicationLauncher(runner);
+            var asset    = new AssetService(settings);
 
             var files    = new AvaloniaFileDialogService();
             var dialogs  = new AvaloniaDialogService();
 
             return new MainViewModel(settings, projects, templates, build, git,
-                                     vscode, launcher, pio, idf, files, dialogs);
+                                     vscode, launcher, pio, idf, asset, files, dialogs);
         }
     }
 }
