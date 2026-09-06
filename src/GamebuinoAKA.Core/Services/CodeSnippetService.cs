@@ -284,14 +284,6 @@ extern ""C"" void app_main(void)
     while (true) {{
         g_core.pool();   // met à jour boutons + joystick
 
-        uint16_t held = g_core.buttons.state() | g_core.joystick.state();
-        if (held & gb_buttons::KEY_LEFT)  playerX -= PLAYER_SPEED;
-        if (held & gb_buttons::KEY_RIGHT) playerX += PLAYER_SPEED;
-        if (held & gb_buttons::KEY_UP)    playerY -= PLAYER_SPEED;
-        if (held & gb_buttons::KEY_DOWN)  playerY += PLAYER_SPEED;
-        if (playerX < 0) playerX = 0; else if (playerX > 315) playerX = 315;
-        if (playerY < 0) playerY = 0; else if (playerY > 235) playerY = 235;
-
         gfx.clear(gfx.makeColor(20, 16, 40));
 {(update.Length > 0 ? Indent(update, 8) + "\n" : "")}
 {(render.Length > 0 ? Indent(render, 8) + "\n" : "")}
@@ -1309,12 +1301,18 @@ Stick : g_core.joystick.get_x()/get_y() (-1000..1000).",
                 Category = "Entrées", Tags = new() { "input", "boutons", "joystick", "esp-idf" },
                 ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
                 Code = @"//@@UPDATE@@
+        // Déplacement (D-pad + joystick émulé)
+        uint16_t held = g_core.buttons.state() | g_core.joystick.state();
+        if (held & gb_buttons::KEY_LEFT)  playerX -= PLAYER_SPEED;
+        if (held & gb_buttons::KEY_RIGHT) playerX += PLAYER_SPEED;
+        if (held & gb_buttons::KEY_UP)    playerY -= PLAYER_SPEED;
+        if (held & gb_buttons::KEY_DOWN)  playerY += PLAYER_SPEED;
+        if (playerX < 0) playerX = 0; else if (playerX > 315) playerX = 315;
+        if (playerY < 0) playerY = 0; else if (playerY > 235) playerY = 235;
+        // Événement
         if (g_core.buttons.pressed(gb_buttons::KEY_A)) {
             // action A
         }
-        int16_t jx = g_core.joystick.get_x();
-        int16_t jy = g_core.joystick.get_y();
-        (void)jx; (void)jy;
 "
             },
 
@@ -1344,13 +1342,10 @@ gfx.setColor(gfx.makeColor(r,g,b)) (0..255, BGR565 automatique).",
                 Explanation = @"gfx.move_cursor(x, y) puis gfx.printf(format, ...) ou gfx.print_str(""texte"").",
                 Category = "Graphismes", Tags = new() { "texte", "score", "esp-idf" },
                 ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
-                Code = @"//@@GLOBALS@@
-static int score = 0;
-
-//@@RENDER@@
+                Code = @"//@@RENDER@@
         gfx.setColor(gfx.makeColor(255, 255, 255));
         gfx.move_cursor(4, 4);
-        gfx.printf(""Score: %d"", score);
+        gfx.print_str(""Bonjour Gamebuino AKA!"");
 "
             },
 
@@ -1447,6 +1442,272 @@ static bool gameStarted = false;
             gfx.setColor(gfx.makeColor(255, 255, 255));
             gfx.move_cursor(110, 100); gfx.print_str(""MON JEU AKA"");
             gfx.move_cursor(104, 130); gfx.print_str(""Appuyez sur A"");
+        }
+"
+            },
+
+            new CodeSnippet
+            {
+                Id = "esp_pause", Name = "Pause (ESP-IDF)",
+                Summary = "Bascule pause avec MENU.",
+                Explanation = @"gb_buttons::KEY_MENU bascule ""paused"". Gardez votre logique avec if (!paused). (Pas de return : le bloc est injecté dans la boucle.)",
+                Category = "Entrées", Tags = new() { "pause", "menu", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static bool paused = false;
+
+//@@UPDATE@@
+        if (g_core.buttons.pressed(gb_buttons::KEY_MENU)) paused = !paused;
+
+//@@RENDER@@
+        if (paused) {
+            gfx.setColor(gfx.makeColor(255, 255, 255));
+            gfx.move_cursor(140, 112);
+            gfx.print_str(""PAUSE"");
+        }
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_fill_background", Name = "Fond (ESP-IDF)",
+                Summary = "Remplit l'écran d'une couleur.",
+                Explanation = @"gfx.clear(gfx.makeColor(r,g,b)).",
+                Category = "Graphismes", Tags = new() { "fond", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@RENDER@@
+        gfx.clear(gfx.makeColor(10, 10, 30));
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_draw_sprite", Name = "Dessiner un sprite (ESP-IDF)",
+                Summary = "Blit d'un sprite BGR565 avec transparence.",
+                Explanation = @"Helper drawSprite565(x,y,data,w,h,key) : dessine pixel par pixel en ignorant la couleur-clé. Exportez un sprite depuis l'éditeur puis appelez-le.",
+                Category = "Graphismes", Tags = new() { "sprite", "blit", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@FUNCTIONS@@
+static void drawSprite565(int x, int y, const uint16_t* data, int w, int h, uint16_t key) {
+    for (int sy = 0; sy < h; sy++)
+        for (int sx = 0; sx < w; sx++) {
+            uint16_t px = data[sy * w + sx];
+            if (px != key) gfx.drawPixel(x + sx, y + sy, px);
+        }
+}
+
+//@@RENDER@@
+        // drawSprite565(playerX, playerY, monSprite, monSprite_width, monSprite_height, 0xF81F);
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_score", Name = "Score + record (ESP-IDF)",
+                Summary = "Compteur de score et meilleur score.",
+                Explanation = @"Incrémente score (A), suit highScore, et l'affiche.",
+                Category = "Logique", Tags = new() { "score", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static int score = 0;
+static int highScore = 0;
+
+//@@UPDATE@@
+        if (g_core.buttons.pressed(gb_buttons::KEY_A)) { score += 10; if (score > highScore) highScore = score; }
+
+//@@RENDER@@
+        gfx.setColor(gfx.makeColor(255, 255, 255));
+        gfx.move_cursor(4, 4);
+        gfx.printf(""Score: %d  Best: %d"", score, highScore);
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_timer", Name = "Chrono (ESP-IDF)",
+                Summary = "Compte à rebours via g_core.get_millis().",
+                Explanation = @"Décompte de TIMER_MS millisecondes depuis le démarrage.",
+                Category = "Logique", Tags = new() { "timer", "chrono", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static uint32_t timerStartMs = 0;
+static const uint32_t TIMER_MS = 30000;
+
+//@@UPDATE@@
+        if (timerStartMs == 0) timerStartMs = g_core.get_millis();
+
+//@@RENDER@@
+        uint32_t elapsed = g_core.get_millis() - timerStartMs;
+        int remaining = (int)((TIMER_MS > elapsed ? TIMER_MS - elapsed : 0) / 1000);
+        gfx.setColor(gfx.makeColor(255, 255, 255));
+        gfx.move_cursor(260, 4);
+        gfx.printf(""T:%d"", remaining);
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_collision_rect", Name = "Collision AABB (ESP-IDF)",
+                Summary = "Test de collision rectangle/rectangle.",
+                Explanation = @"Helper aabb(...) : vrai si deux rectangles se chevauchent.",
+                Category = "Logique", Tags = new() { "collision", "aabb", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@FUNCTIONS@@
+static bool aabb(int ax, int ay, int aw, int ah, int bx, int by, int bw, int bh) {
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+}
+
+//@@UPDATE@@
+        // if (aabb(playerX, playerY, 16, 16, ex, ey, 16, 16)) { /* collision */ }
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_state_machine", Name = "Machine à états (ESP-IDF)",
+                Summary = "Menu / Jeu / Game Over.",
+                Explanation = @"enum GameState + switch. A fait avancer les états.",
+                Category = "Logique", Tags = new() { "état", "machine", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+enum GameState { GS_MENU, GS_PLAY, GS_OVER };
+static GameState gameState = GS_MENU;
+
+//@@UPDATE@@
+        switch (gameState) {
+            case GS_MENU: if (g_core.buttons.pressed(gb_buttons::KEY_A)) gameState = GS_PLAY; break;
+            case GS_PLAY: /* logique de jeu */ break;
+            case GS_OVER: if (g_core.buttons.pressed(gb_buttons::KEY_A)) gameState = GS_MENU; break;
+        }
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_random", Name = "Aléatoire (ESP-IDF)",
+                Summary = "Générateur matériel esp_random().",
+                Explanation = @"esp_random() renvoie un uint32 matériel. Modulo pour borner.",
+                Category = "Logique", Tags = new() { "aléatoire", "random", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@INCLUDES@@
+#include ""esp_random.h""
+
+//@@UPDATE@@
+        if (g_core.buttons.pressed(gb_buttons::KEY_B)) {
+            int spawnX = (int)(esp_random() % (320 - 16));
+            (void)spawnX;
+        }
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_gravity", Name = "Gravité + saut (ESP-IDF)",
+                Summary = "Chute + saut avec A.",
+                Explanation = @"Applique une gravité à vy, saute quand au sol. Alternative à la vélocité.",
+                Category = "Physique", Tags = new() { "gravité", "saut", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static float vy = 0.0f;
+static const float GRAVITY = 0.3f;
+
+//@@UPDATE@@
+        vy += GRAVITY;
+        playerY += (int)vy;
+        if (playerY >= 235) { playerY = 235; vy = 0.0f; }
+        if (g_core.buttons.pressed(gb_buttons::KEY_A) && playerY >= 235) vy = -6.0f;
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_velocity", Name = "Vélocité + friction (ESP-IDF)",
+                Summary = "Déplacement inertiel (alternative à esp_input).",
+                Explanation = @"Accumule velX/velY selon les directions, avec friction. N'utilisez PAS esp_input en même temps (les deux déplacent le joueur).",
+                Category = "Physique", Tags = new() { "vélocité", "inertie", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static float velX = 0.0f, velY = 0.0f;
+static const float MOVE_ACCEL = 0.4f;
+static const float MOVE_FRICTION = 0.85f;
+
+//@@UPDATE@@
+        uint16_t vheld = g_core.buttons.state() | g_core.joystick.state();
+        if (vheld & gb_buttons::KEY_LEFT)  velX -= MOVE_ACCEL;
+        if (vheld & gb_buttons::KEY_RIGHT) velX += MOVE_ACCEL;
+        if (vheld & gb_buttons::KEY_UP)    velY -= MOVE_ACCEL;
+        if (vheld & gb_buttons::KEY_DOWN)  velY += MOVE_ACCEL;
+        velX *= MOVE_FRICTION; velY *= MOVE_FRICTION;
+        playerX += (int)velX; playerY += (int)velY;
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_bounce", Name = "Rebond sur les bords (ESP-IDF)",
+                Summary = "Inverse la vitesse aux bords.",
+                Explanation = @"Clampe (320x240) et inverse velX/velY. À combiner avec esp_velocity.",
+                Category = "Physique", Tags = new() { "rebond", "bounce", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                RequiresSnippetIds = new() { "esp_velocity" },
+                Code = @"//@@UPDATE@@
+        if (playerX < 0)        { playerX = 0;        velX = -velX; }
+        if (playerY < 0)        { playerY = 0;        velY = -velY; }
+        if (playerX > 320 - 16) { playerX = 320 - 16; velX = -velX; }
+        if (playerY > 240 - 16) { playerY = 240 - 16; velY = -velY; }
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_camera_scroll", Name = "Caméra (ESP-IDF)",
+                Summary = "Décalage de caméra centré sur le joueur.",
+                Explanation = @"camX/camY suivent le joueur ; dessinez le monde décalé de (-camX,-camY).",
+                Category = "Caméra", Tags = new() { "caméra", "scroll", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static int camX = 0, camY = 0;
+
+//@@UPDATE@@
+        camX = playerX - 160;
+        camY = playerY - 120;
+
+//@@RENDER@@
+        // Dessinez chaque élément décalé : gfx.fillRect(worldX - camX, worldY - camY, w, h);
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_debug", Name = "Overlay debug (ESP-IDF)",
+                Summary = "FPS + position affichés en bas.",
+                Explanation = @"Compte les frames par seconde via g_core.get_millis() et affiche FPS/position.",
+                Category = "Débogage", Tags = new() { "debug", "fps", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static uint32_t fpsLast = 0;
+static int fpsCount = 0, fps = 0;
+
+//@@UPDATE@@
+        fpsCount++;
+        if (g_core.get_millis() - fpsLast >= 1000) { fps = fpsCount; fpsCount = 0; fpsLast = g_core.get_millis(); }
+
+//@@RENDER@@
+        gfx.setColor(gfx.makeColor(255, 255, 0));
+        gfx.move_cursor(4, 230);
+        gfx.printf(""FPS:%d X:%d Y:%d"", fps, playerX, playerY);
+"
+            },
+            new CodeSnippet
+            {
+                Id = "esp_menu", Name = "Menu vertical (ESP-IDF)",
+                Summary = "Menu HAUT/BAS + validation A.",
+                Explanation = @"Sélection avec bouclage ; A valide menuIndex.",
+                Category = "Interface", Tags = new() { "menu", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static const char* menuItems[] = { ""Jouer"", ""Options"", ""Quitter"" };
+static const int MENU_COUNT = 3;
+static int menuIndex = 0;
+
+//@@UPDATE@@
+        if (g_core.buttons.pressed(gb_buttons::KEY_UP))   menuIndex = (menuIndex + MENU_COUNT - 1) % MENU_COUNT;
+        if (g_core.buttons.pressed(gb_buttons::KEY_DOWN)) menuIndex = (menuIndex + 1) % MENU_COUNT;
+        if (g_core.buttons.pressed(gb_buttons::KEY_A)) { /* valider menuIndex */ }
+
+//@@RENDER@@
+        for (int i = 0; i < MENU_COUNT; i++) {
+            gfx.setColor(i == menuIndex ? gfx.makeColor(255, 255, 0) : gfx.makeColor(255, 255, 255));
+            gfx.move_cursor(120, 90 + i * 16);
+            gfx.print_str(menuItems[i]);
         }
 "
             },

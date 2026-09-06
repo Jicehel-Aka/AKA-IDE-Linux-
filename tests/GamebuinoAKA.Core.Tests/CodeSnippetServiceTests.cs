@@ -41,6 +41,7 @@ namespace GamebuinoAKA.Core.Tests
             var (svc, _) = Make();
             var list = svc.GetAll(BuildSystem.EspIdf);
             Assert.NotEmpty(list);
+            Assert.True(list.Count >= 15, "Le catalogue ESP-IDF doit être aligné sur PlatformIO.");
             Assert.Contains(list, s => s.Id == "esp_gfx_shapes");
         }
 
