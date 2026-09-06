@@ -254,6 +254,7 @@ void loop() {{
         {
             var includes  = Collect(snippets, "//@@INCLUDES@@");
             var globals   = Collect(snippets, "//@@GLOBALS@@");
+            var setup     = Collect(snippets, "//@@SETUP@@");
             var update    = Collect(snippets, "//@@UPDATE@@");
             var render    = Collect(snippets, "//@@RENDER@@");
             var functions = Collect(snippets, "//@@FUNCTIONS@@");
@@ -269,13 +270,28 @@ $@"/*
 {(includes.Length > 0 ? includes + "\n" : "")}
 gb_core     g_core;
 gb_graphics gfx;
+
+// État de base (déplacement du joueur)
+static int playerX = 160;
+static int playerY = 120;
+static const int PLAYER_SPEED = 2;
 {(globals.Length > 0 ? "\n" + globals : "")}
 {(functions.Length > 0 ? functions + "\n" : "")}
 extern ""C"" void app_main(void)
 {{
     g_core.init();
-
+{(setup.Length > 0 ? "\n" + Indent(setup, 4) + "\n" : "")}
     while (true) {{
+        g_core.pool();   // met à jour boutons + joystick
+
+        uint16_t held = g_core.buttons.state() | g_core.joystick.state();
+        if (held & gb_buttons::KEY_LEFT)  playerX -= PLAYER_SPEED;
+        if (held & gb_buttons::KEY_RIGHT) playerX += PLAYER_SPEED;
+        if (held & gb_buttons::KEY_UP)    playerY -= PLAYER_SPEED;
+        if (held & gb_buttons::KEY_DOWN)  playerY += PLAYER_SPEED;
+        if (playerX < 0) playerX = 0; else if (playerX > 315) playerX = 315;
+        if (playerY < 0) playerY = 0; else if (playerY > 235) playerY = 235;
+
         gfx.clear(gfx.makeColor(20, 16, 40));
 {(update.Length > 0 ? Indent(update, 8) + "\n" : "")}
 {(render.Length > 0 ? Indent(render, 8) + "\n" : "")}
@@ -948,6 +964,163 @@ Conseil : désactivez l'overlay en production avec un #define DEBUG_MODE.",
              gb.getCpuLoad(), playerX, playerY);
     gb.display.print(dbgBuf);
 #endif
+"
+            },
+
+            // ══════════════════════════════════════════════════════════════════
+            //  ESP-IDF (coquille : gfx / g_core). Le squelette app_main appelle
+            //  g_core.pool() et gère playerX/playerY (D-pad + stick).
+            // ══════════════════════════════════════════════════════════════════
+
+            new CodeSnippet
+            {
+                Id = "esp_input", Name = "Entrées coquille (ESP-IDF)",
+                Summary = "Boutons (événements) et joystick analogique.",
+                Explanation = @"Le squelette appelle déjà g_core.pool() et déplace playerX/playerY.
+Événements : g_core.buttons.pressed(gb_buttons::KEY_A). Maintenu : g_core.buttons.state() & KEY_x.
+Stick : g_core.joystick.get_x()/get_y() (-1000..1000).",
+                Category = "Entrées", Tags = new() { "input", "boutons", "joystick", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@UPDATE@@
+        if (g_core.buttons.pressed(gb_buttons::KEY_A)) {
+            // action A
+        }
+        int16_t jx = g_core.joystick.get_x();
+        int16_t jy = g_core.joystick.get_y();
+        (void)jx; (void)jy;
+"
+            },
+
+            new CodeSnippet
+            {
+                Id = "esp_gfx_shapes", Name = "Formes (ESP-IDF)",
+                Summary = "Rectangle, contour, ligne, cercle avec gb_graphics.",
+                Explanation = @"gfx.fillRect / drawRect / drawLine / fillCircle. Couleur :
+gfx.setColor(gfx.makeColor(r,g,b)) (0..255, BGR565 automatique).",
+                Category = "Graphismes", Tags = new() { "formes", "cercle", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@RENDER@@
+        gfx.setColor(gfx.makeColor(0, 120, 255));
+        gfx.fillRect(playerX, playerY, 16, 16);
+        gfx.setColor(gfx.makeColor(255, 255, 255));
+        gfx.drawRect(playerX - 1, playerY - 1, 18, 18);
+        gfx.setColor(gfx.makeColor(255, 200, 0));
+        gfx.drawLine(10, 10, playerX, playerY);
+        gfx.fillCircle(40, 200, 8);
+"
+            },
+
+            new CodeSnippet
+            {
+                Id = "esp_gfx_text", Name = "Texte / score (ESP-IDF)",
+                Summary = "Texte formaté avec gfx.printf.",
+                Explanation = @"gfx.move_cursor(x, y) puis gfx.printf(format, ...) ou gfx.print_str(""texte"").",
+                Category = "Graphismes", Tags = new() { "texte", "score", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static int score = 0;
+
+//@@RENDER@@
+        gfx.setColor(gfx.makeColor(255, 255, 255));
+        gfx.move_cursor(4, 4);
+        gfx.printf(""Score: %d"", score);
+"
+            },
+
+            new CodeSnippet
+            {
+                Id = "esp_healthbar", Name = "Jauge de vie (ESP-IDF)",
+                Summary = "Barre de vie proportionnelle (gfx.fillRect).",
+                Explanation = @"Fond gris, remplissage proportionnel (vert, rouge sous 30 %), contour blanc.",
+                Category = "Graphismes", Tags = new() { "vie", "jauge", "hud", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static int hp = 100;
+static const int HP_MAX = 100;
+
+//@@RENDER@@
+        const int bx = 4, by = 16, bw = 80, bh = 6;
+        gfx.setColor(gfx.makeColor(60, 60, 60));  gfx.fillRect(bx, by, bw, bh);
+        int w = (bw * hp) / HP_MAX; if (w < 0) w = 0;
+        gfx.setColor(hp > 30 ? gfx.makeColor(0, 200, 0) : gfx.makeColor(220, 0, 0));
+        gfx.fillRect(bx, by, w, bh);
+        gfx.setColor(gfx.makeColor(255, 255, 255)); gfx.drawRect(bx, by, bw, bh);
+"
+            },
+
+            new CodeSnippet
+            {
+                Id = "esp_animation", Name = "Animation de sprite (ESP-IDF)",
+                Summary = "Défilement de frames via g_core.get_millis().",
+                Explanation = @"Pas de frameCount en ESP-IDF : on cadence avec le temps réel.
+animFrame = (g_core.get_millis() / ANIM_MS) % ANIM_FRAMES.",
+                Category = "Logique", Tags = new() { "animation", "frame", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static const uint8_t  ANIM_FRAMES = 4;
+static const uint32_t ANIM_MS     = 120;
+
+//@@RENDER@@
+        uint8_t animFrame = (uint8_t)((g_core.get_millis() / ANIM_MS) % ANIM_FRAMES);
+        (void)animFrame; // choisir la sous-image du sprite selon animFrame
+"
+            },
+
+            new CodeSnippet
+            {
+                Id = "esp_entities", Name = "Tableau d'entités (ESP-IDF)",
+                Summary = "Pool fixe (spawn/update/draw) rendu avec gfx.",
+                Explanation = @"Pool sans allocation dynamique. spawnEntity() active un emplacement libre ;
+la boucle déplace et désactive hors écran ; rendu via gfx.fillRect.",
+                Category = "Logique", Tags = new() { "entités", "ennemis", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+struct Entity { int x, y; int8_t vx, vy; bool active; };
+static const int MAX_ENTITIES = 16;
+static Entity entities[MAX_ENTITIES];
+
+//@@FUNCTIONS@@
+static void spawnEntity(int x, int y, int8_t vx, int8_t vy) {
+    for (int i = 0; i < MAX_ENTITIES; i++)
+        if (!entities[i].active) { entities[i] = { x, y, vx, vy, true }; return; }
+}
+
+//@@UPDATE@@
+        for (int i = 0; i < MAX_ENTITIES; i++) {
+            if (!entities[i].active) continue;
+            entities[i].x += entities[i].vx;
+            entities[i].y += entities[i].vy;
+            if (entities[i].x < -16 || entities[i].x > 320 ||
+                entities[i].y < -16 || entities[i].y > 240) entities[i].active = false;
+        }
+
+//@@RENDER@@
+        gfx.setColor(gfx.makeColor(220, 40, 40));
+        for (int i = 0; i < MAX_ENTITIES; i++)
+            if (entities[i].active) gfx.fillRect(entities[i].x, entities[i].y, 8, 8);
+"
+            },
+
+            new CodeSnippet
+            {
+                Id = "esp_title", Name = "Écran titre (ESP-IDF)",
+                Summary = "Écran d'accueil ; A démarre la partie.",
+                Explanation = @"Tant que gameStarted est faux, un écran titre est affiché et A démarre.",
+                Category = "Interface", Tags = new() { "titre", "start", "esp-idf" },
+                ForPlatformIO = false, ForEspIdf = true, TargetFile = SnippetTargetFile.MainCpp,
+                Code = @"//@@GLOBALS@@
+static bool gameStarted = false;
+
+//@@UPDATE@@
+        if (!gameStarted && g_core.buttons.pressed(gb_buttons::KEY_A)) gameStarted = true;
+
+//@@RENDER@@
+        if (!gameStarted) {
+            gfx.clear(gfx.makeColor(0, 0, 0));
+            gfx.setColor(gfx.makeColor(255, 255, 255));
+            gfx.move_cursor(110, 100); gfx.print_str(""MON JEU AKA"");
+            gfx.move_cursor(104, 130); gfx.print_str(""Appuyez sur A"");
+        }
 "
             },
         };

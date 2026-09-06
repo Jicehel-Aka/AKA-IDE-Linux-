@@ -26,13 +26,21 @@ namespace GamebuinoAKA.Core.Tests
             Assert.All(list, s => Assert.True(s.ForPlatformIO));
         }
 
+        // Robuste : le filtrage est correct même si le catalogue était vide côté ESP-IDF.
         [Fact]
-        public void GetAll_EspIdf_OnlyEspIdf_AndContainsShapes()
+        public void GetAll_EspIdf_ReturnsOnlyEspIdfSnippets()
+        {
+            var (svc, _) = Make();
+            Assert.All(svc.GetAll(BuildSystem.EspIdf), s => Assert.True(s.ForEspIdf));
+        }
+
+        // Réel : le catalogue contient bien des procédures ESP-IDF.
+        [Fact]
+        public void GetAll_EspIdf_ContainsBuiltinProcedures()
         {
             var (svc, _) = Make();
             var list = svc.GetAll(BuildSystem.EspIdf);
             Assert.NotEmpty(list);
-            Assert.All(list, s => Assert.True(s.ForEspIdf));
             Assert.Contains(list, s => s.Id == "esp_gfx_shapes");
         }
 
@@ -43,8 +51,23 @@ namespace GamebuinoAKA.Core.Tests
             var snip = svc.GetAll(BuildSystem.EspIdf).First(s => s.Id == "esp_gfx_shapes");
             var files = svc.GenerateFiles(new[] { snip }, BuildSystem.EspIdf, "MonJeu");
             Assert.Contains(files.Keys, k => k.Contains("app_main"));
-            var appMain = files.First(kv => kv.Key.Contains("app_main")).Value;
-            Assert.Contains("fillRect", appMain);
+            Assert.Contains("fillRect", files.First(kv => kv.Key.Contains("app_main")).Value);
+        }
+
+        // Robuste : teste le moteur d'injection avec un snippet synthétique.
+        [Fact]
+        public void GenerateFiles_InjectsSnippetMarkerContent()
+        {
+            var (svc, _) = Make();
+            var snip = new CodeSnippet
+            {
+                Id = "test_marker", Name = "Test", ForPlatformIO = true,
+                TargetFile = SnippetTargetFile.GameCpp,
+                Code = "//@@GLOBALS@@\nstatic int MARKER_XZ = 1;\n"
+            };
+            var files = svc.GenerateFiles(new[] { snip }, BuildSystem.PlatformIO, "MonJeu");
+            Assert.NotEmpty(files);
+            Assert.Contains(files.Values, v => v.Contains("MARKER_XZ"));
         }
 
         [Fact]
@@ -63,9 +86,7 @@ namespace GamebuinoAKA.Core.Tests
             var bank = svc.LoadUserBank();
             bank.UserSnippets.Add(new CodeSnippet { Id = "u1", Name = "Mon snippet", ForPlatformIO = true });
             svc.SaveUserBank(bank);
-
-            var reloaded = new CodeSnippetService(settings).LoadUserBank();
-            Assert.Contains(reloaded.UserSnippets, s => s.Id == "u1");
+            Assert.Contains(new CodeSnippetService(settings).LoadUserBank().UserSnippets, s => s.Id == "u1");
         }
     }
 }
