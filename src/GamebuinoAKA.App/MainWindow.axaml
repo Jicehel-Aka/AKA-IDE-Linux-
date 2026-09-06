@@ -13,6 +13,7 @@
                 <Button Content="📁  Projets" HorizontalAlignment="Stretch" Command="{Binding NavigateToProjectsCommand}"/>
                 <Button Content="➕  Nouveau projet" HorizontalAlignment="Stretch" Command="{Binding NavigateToNewProjectCommand}"/>
                 <Button Content="🎨  Éditeur de sprites" HorizontalAlignment="Stretch" Command="{Binding NavigateToSpriteEditorCommand}"/>
+                <Button Content="🗺  Éditeur de tilemaps" HorizontalAlignment="Stretch" Command="{Binding NavigateToTilemapEditorCommand}"/>
                 <Button Content="⚙  Paramètres" HorizontalAlignment="Stretch" Command="{Binding NavigateToSettingsCommand}"/>
             </StackPanel>
         </Border>

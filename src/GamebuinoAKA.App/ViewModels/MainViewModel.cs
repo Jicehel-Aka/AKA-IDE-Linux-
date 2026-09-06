@@ -12,8 +12,7 @@ namespace GamebuinoAKA.App.ViewModels
         public NewProjectViewModel NewProject { get; }
         public SettingsViewModel Settings { get; }
         public SpriteEditorViewModel SpriteEditor { get; }
-
-        private readonly IDialogService _dialogs;
+        public TilemapEditorViewModel TilemapEditor { get; }
 
         [ObservableProperty] private object? _currentPage;
 
@@ -23,13 +22,12 @@ namespace GamebuinoAKA.App.ViewModels
             IApplicationLauncher launcher, IPlatformIOService pio, IEspIdfService idf,
             AssetService asset, IFileDialogService files, IDialogService dialogs)
         {
-            _dialogs = dialogs;
-
             Home = new HomeViewModel(this);
             Projects = new ProjectsViewModel(projects, build, git, vscode, launcher, settings, this, dialogs);
             NewProject = new NewProjectViewModel(templates, settings, this, files, dialogs);
             Settings = new SettingsViewModel(settings, pio, idf, vscode, files);
             SpriteEditor = new SpriteEditorViewModel(asset, settings, files, dialogs);
+            TilemapEditor = new TilemapEditorViewModel(asset, files);
 
             NavigateToProjects();
         }
@@ -39,8 +37,6 @@ namespace GamebuinoAKA.App.ViewModels
         [RelayCommand] public void NavigateToNewProject() => CurrentPage = NewProject;
         [RelayCommand] public void NavigateToSettings() => CurrentPage = Settings;
         [RelayCommand] public void NavigateToSpriteEditor() => CurrentPage = SpriteEditor;
-
-        public async void NavigateToTilemapEditor()
-            => await _dialogs.ShowMessageAsync("Éditeur de tilemaps", "Disponible dans un prochain lot (14).");
+        [RelayCommand] public void NavigateToTilemapEditor() => CurrentPage = TilemapEditor;
     }
 }
