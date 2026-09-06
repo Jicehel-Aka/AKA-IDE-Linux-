@@ -967,6 +967,333 @@ Conseil : désactivez l'overlay en production avec un #define DEBUG_MODE.",
 "
             },
 
+
+            // ── ENTRÉES (suite) ────────────────────────────────────────────────
+            new CodeSnippet
+            {
+                Id = "input_menu_pause", Name = "Pause (bouton Menu)",
+                Summary = "Met le jeu en pause avec BUTTON_MENU.",
+                Explanation = @"Bascule un état pause à chaque appui sur BUTTON_MENU (gèle la logique + affiche PAUSE). À placer en premier dans //@@UPDATE@@.",
+                Category = "Entrées", Tags = new() { "pause", "menu" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@GLOBALS@@
+static bool paused = false;
+
+//@@UPDATE@@
+    if (gb.buttons.pressed(BUTTON_MENU)) paused = !paused;
+    if (paused) return;
+
+//@@RENDER@@
+    if (paused) {
+        gb.display.setColor(WHITE);
+        gb.display.setCursor(140, 112);
+        gb.display.print(""PAUSE"");
+    }
+"
+            },
+
+            // ── GRAPHISMES (suite) ─────────────────────────────────────────────
+            new CodeSnippet
+            {
+                Id = "gfx_draw_line", Name = "Ligne",
+                Summary = "Trace une ligne entre deux points.",
+                Explanation = @"gb.display.drawLine(x0, y0, x1, y1) avec la couleur courante.",
+                Category = "Graphismes", Tags = new() { "ligne", "dessin" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@RENDER@@
+    gb.display.setColor(GREEN);
+    gb.display.drawLine(10, 10, playerX, playerY);
+"
+            },
+            new CodeSnippet
+            {
+                Id = "gfx_healthbar", Name = "Jauge de vie",
+                Summary = "Barre de vie proportionnelle.",
+                Explanation = @"Fond gris, remplissage proportionnel (vert, rouge sous 30 %), contour blanc.",
+                Category = "Graphismes", Tags = new() { "vie", "jauge", "hud" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@GLOBALS@@
+static int playerHP = 100;
+static const int PLAYER_HP_MAX = 100;
+
+//@@RENDER@@
+    const int barX = 4, barY = 14, barW = 80, barH = 6;
+    gb.display.setColor(DARKGRAY); gb.display.fillRect(barX, barY, barW, barH);
+    int hpW = (barW * playerHP) / PLAYER_HP_MAX; if (hpW < 0) hpW = 0;
+    gb.display.setColor(playerHP > 30 ? GREEN : RED); gb.display.fillRect(barX, barY, hpW, barH);
+    gb.display.setColor(WHITE); gb.display.drawRect(barX, barY, barW, barH);
+"
+            },
+
+            // ── LOGIQUE (suite) ────────────────────────────────────────────────
+            new CodeSnippet
+            {
+                Id = "logic_animation", Name = "Animation de sprite",
+                Summary = "Fait défiler les frames au fil du temps.",
+                Explanation = @"animFrame = (gb.frameCount / ANIM_SPEED) % ANIM_FRAME_COUNT. Utilisez animFrame au rendu.",
+                Category = "Logique", Tags = new() { "animation", "frame", "sprite" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@GLOBALS@@
+static const uint8_t ANIM_FRAME_COUNT = 4;
+static const uint8_t ANIM_SPEED       = 6;
+static uint8_t        animFrame        = 0;
+
+//@@UPDATE@@
+    animFrame = (gb.frameCount / ANIM_SPEED) % ANIM_FRAME_COUNT;
+"
+            },
+            new CodeSnippet
+            {
+                Id = "logic_random", Name = "Aléatoire",
+                Summary = "Tirage de nombres aléatoires.",
+                Explanation = @"random(min, max) renvoie un entier dans [min, max[. Initialisez avec randomSeed(analogRead(0)) au setup.",
+                Category = "Logique", Tags = new() { "aléatoire", "random" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@UPDATE@@
+    if (gb.buttons.pressed(BUTTON_B)) {
+        int spawnX = random(0, 320 - 16);
+        (void)spawnX;   // utilisez cette valeur (apparition, etc.)
+    }
+"
+            },
+            new CodeSnippet
+            {
+                Id = "logic_entities", Name = "Tableau d'entités",
+                Summary = "Pool fixe (ennemis/projectiles) spawn/update/draw.",
+                Explanation = @"Pool sans allocation dynamique ; spawnEntity() active un emplacement libre.",
+                Category = "Logique", Tags = new() { "entités", "ennemis", "pool" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@GLOBALS@@
+struct Entity { int x, y; int8_t vx, vy; bool active; };
+static const int MAX_ENTITIES = 16;
+static Entity entities[MAX_ENTITIES];
+
+//@@FUNCTIONS@@
+static void spawnEntity(int x, int y, int8_t vx, int8_t vy) {
+    for (int i = 0; i < MAX_ENTITIES; i++)
+        if (!entities[i].active) { entities[i] = { x, y, vx, vy, true }; return; }
+}
+
+//@@UPDATE@@
+    for (int i = 0; i < MAX_ENTITIES; i++) {
+        if (!entities[i].active) continue;
+        entities[i].x += entities[i].vx; entities[i].y += entities[i].vy;
+        if (entities[i].x < -16 || entities[i].x > 320 ||
+            entities[i].y < -16 || entities[i].y > 240) entities[i].active = false;
+    }
+
+//@@RENDER@@
+    gb.display.setColor(RED);
+    for (int i = 0; i < MAX_ENTITIES; i++)
+        if (entities[i].active) gb.display.fillRect(entities[i].x, entities[i].y, 8, 8);
+"
+            },
+
+            // ── PHYSIQUE (suite) ───────────────────────────────────────────────
+            new CodeSnippet
+            {
+                Id = "physics_velocity", Name = "Vélocité + friction",
+                Summary = "Déplacement inertiel (accélération + friction).",
+                Explanation = @"Accumule une vitesse (velX/velY) appliquée à la position, avec friction. Contrôle glissant.",
+                Category = "Physique", Tags = new() { "vélocité", "inertie", "mouvement" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@GLOBALS@@
+static float velX = 0.0f, velY = 0.0f;
+static const float MOVE_ACCEL    = 0.4f;
+static const float MOVE_FRICTION = 0.85f;
+
+//@@UPDATE@@
+    if (gb.buttons.repeat(BUTTON_LEFT,  1)) velX -= MOVE_ACCEL;
+    if (gb.buttons.repeat(BUTTON_RIGHT, 1)) velX += MOVE_ACCEL;
+    if (gb.buttons.repeat(BUTTON_UP,    1)) velY -= MOVE_ACCEL;
+    if (gb.buttons.repeat(BUTTON_DOWN,  1)) velY += MOVE_ACCEL;
+    velX *= MOVE_FRICTION;  velY *= MOVE_FRICTION;
+    playerX += (int)velX;   playerY += (int)velY;
+"
+            },
+            new CodeSnippet
+            {
+                Id = "physics_bounce", Name = "Rebond sur les bords",
+                Summary = "Inverse la vitesse aux bords (nécessite la vélocité).",
+                Explanation = @"Clampe la position (320x240) et inverse velX/velY. À combiner avec « Vélocité + friction ».",
+                Category = "Physique", Tags = new() { "rebond", "bord", "bounce" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                RequiresSnippetIds = new() { "physics_velocity" },
+                Code = @"//@@UPDATE@@
+    if (playerX < 0)        { playerX = 0;        velX = -velX; }
+    if (playerY < 0)        { playerY = 0;        velY = -velY; }
+    if (playerX > 320 - 16) { playerX = 320 - 16; velX = -velX; }
+    if (playerY > 240 - 16) { playerY = 240 - 16; velY = -velY; }
+"
+            },
+
+            // ── INTERFACE ──────────────────────────────────────────────────────
+            new CodeSnippet
+            {
+                Id = "ui_title_screen", Name = "Écran titre",
+                Summary = "Accueil ; le jeu démarre sur A.",
+                Explanation = @"Tant que gameStarted est faux, gèle le jeu et affiche l'écran titre. À placer en premier dans //@@UPDATE@@.",
+                Category = "Interface", Tags = new() { "titre", "accueil", "start" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@GLOBALS@@
+static bool gameStarted = false;
+
+//@@UPDATE@@
+    if (!gameStarted) {
+        if (gb.buttons.pressed(BUTTON_A)) gameStarted = true;
+        return;
+    }
+
+//@@RENDER@@
+    if (!gameStarted) {
+        gb.display.setColor(BLACK); gb.display.fill();
+        gb.display.setColor(WHITE);
+        gb.display.setCursor(110, 100); gb.display.print(""MON JEU AKA"");
+        gb.display.setCursor(104, 130); gb.display.print(""Appuyez sur A"");
+    }
+"
+            },
+            new CodeSnippet
+            {
+                Id = "ui_simple_menu", Name = "Menu vertical",
+                Summary = "Menu HAUT/BAS + validation A.",
+                Explanation = @"Sélection au clavier directionnel avec bouclage ; A valide menuIndex.",
+                Category = "Interface", Tags = new() { "menu", "navigation" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@GLOBALS@@
+static const char* menuItems[] = { ""Jouer"", ""Options"", ""Quitter"" };
+static const int   MENU_COUNT  = 3;
+static int         menuIndex   = 0;
+
+//@@UPDATE@@
+    if (gb.buttons.pressed(BUTTON_UP))   menuIndex = (menuIndex + MENU_COUNT - 1) % MENU_COUNT;
+    if (gb.buttons.pressed(BUTTON_DOWN)) menuIndex = (menuIndex + 1) % MENU_COUNT;
+    if (gb.buttons.pressed(BUTTON_A)) {
+        switch (menuIndex) { case 0: break; case 1: break; case 2: break; }
+    }
+
+//@@RENDER@@
+    for (int i = 0; i < MENU_COUNT; i++) {
+        gb.display.setColor(i == menuIndex ? YELLOW : WHITE);
+        gb.display.setCursor(120, 90 + i * 16);
+        gb.display.print(menuItems[i]);
+    }
+"
+            },
+
+            // ── SON / MUSIQUE (suite) ──────────────────────────────────────────
+            new CodeSnippet
+            {
+                Id = "sound_sfx_jump", Name = "Effet : saut",
+                Summary = "Bip court au saut (A).",
+                Explanation = @"gb.sound.tone(fréquenceHz, duréeMs), non bloquant.",
+                Category = "Son", Tags = new() { "effet", "saut" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@UPDATE@@
+    if (gb.buttons.pressed(BUTTON_A)) gb.sound.tone(660, 60);
+"
+            },
+            new CodeSnippet
+            {
+                Id = "sound_sfx_coin", Name = "Effet : pièce",
+                Summary = "Cling aigu de ramassage.",
+                Explanation = @"Note aiguë brève ; déclenchez sur collision joueur/objet.",
+                Category = "Son", Tags = new() { "effet", "pièce", "bonus" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@UPDATE@@
+    if (gb.buttons.pressed(BUTTON_B)) gb.sound.tone(988, 50);
+"
+            },
+            new CodeSnippet
+            {
+                Id = "sound_sfx_hurt", Name = "Effet : dégât",
+                Summary = "Note grave courte de dégât.",
+                Explanation = @"Appelez sfxHurt() quand le joueur perd de la vie.",
+                Category = "Son", Tags = new() { "effet", "dégât" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@FUNCTIONS@@
+static inline void sfxHurt() { gb.sound.tone(120, 120); }
+
+//@@UPDATE@@
+    // Appelez sfxHurt(); au moment d'un dégât.
+"
+            },
+            new CodeSnippet
+            {
+                Id = "music_victory", Name = "Jingle : victoire",
+                Summary = "Fanfare ascendante jouée une fois.",
+                Explanation = @"Séquenceur sur gb.frameCount. Déclenchez avec playVictory().",
+                Category = "Son", Tags = new() { "musique", "jingle", "victoire" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@GLOBALS@@
+static const uint16_t victoryNotes[][2] = { {392,6},{523,6},{659,6},{784,14} };
+static const int VICTORY_LEN = 4;
+static int      victoryStep = -1;
+static uint32_t victoryNext = 0;
+
+//@@FUNCTIONS@@
+static void playVictory() { victoryStep = 0; victoryNext = gb.frameCount; }
+
+//@@UPDATE@@
+    if (victoryStep >= 0 && gb.frameCount >= victoryNext) {
+        if (victoryStep < VICTORY_LEN) {
+            gb.sound.tone(victoryNotes[victoryStep][0], (victoryNotes[victoryStep][1] * 1000) / 30);
+            victoryNext = gb.frameCount + victoryNotes[victoryStep][1];
+            victoryStep++;
+        } else { victoryStep = -1; }
+    }
+"
+            },
+            new CodeSnippet
+            {
+                Id = "music_gameover", Name = "Jingle : game over",
+                Summary = "Descente sombre jouée une fois.",
+                Explanation = @"Déclenchez avec playGameOver().",
+                Category = "Son", Tags = new() { "musique", "jingle", "défaite" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@GLOBALS@@
+static const uint16_t goNotes[][2] = { {392,10},{311,10},{262,20} };
+static const int GO_LEN = 3;
+static int      goStep = -1;
+static uint32_t goNext = 0;
+
+//@@FUNCTIONS@@
+static void playGameOver() { goStep = 0; goNext = gb.frameCount; }
+
+//@@UPDATE@@
+    if (goStep >= 0 && gb.frameCount >= goNext) {
+        if (goStep < GO_LEN) {
+            gb.sound.tone(goNotes[goStep][0], (goNotes[goStep][1] * 1000) / 30);
+            goNext = gb.frameCount + goNotes[goStep][1];
+            goStep++;
+        } else { goStep = -1; }
+    }
+"
+            },
+            new CodeSnippet
+            {
+                Id = "sound_melody", Name = "Mélodie (séquence de notes)",
+                Summary = "Joue une suite de notes en boucle.",
+                Explanation = @"Tableau {fréquence, durée en frames} joué via gb.sound.tone (0 Hz = silence).",
+                Category = "Son", Tags = new() { "musique", "mélodie", "jingle" },
+                ForPlatformIO = true, ForEspIdf = false, TargetFile = SnippetTargetFile.GameCpp,
+                Code = @"//@@GLOBALS@@
+static const uint16_t melody[][2] = { {262,8}, {330,8}, {392,8}, {523,16}, {0,8} };
+static const int MELODY_LEN      = 5;
+static int       melodyStep      = 0;
+static uint32_t  melodyNextFrame = 0;
+
+//@@UPDATE@@
+    if (gb.frameCount >= melodyNextFrame) {
+        uint16_t freq = melody[melodyStep][0];
+        uint16_t dur  = melody[melodyStep][1];
+        if (freq > 0) gb.sound.tone(freq, (dur * 1000) / 30);
+        melodyNextFrame = gb.frameCount + dur;
+        melodyStep = (melodyStep + 1) % MELODY_LEN;
+    }
+"
+            },
+
             // ══════════════════════════════════════════════════════════════════
             //  ESP-IDF (coquille : gfx / g_core). Le squelette app_main appelle
             //  g_core.pool() et gère playerX/playerY (D-pad + stick).
