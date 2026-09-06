@@ -13,6 +13,8 @@ namespace GamebuinoAKA.App.ViewModels
         public SettingsViewModel Settings { get; }
         public SpriteEditorViewModel SpriteEditor { get; }
         public TilemapEditorViewModel TilemapEditor { get; }
+        public SoundBankViewModel SoundBank { get; }
+        public SnippetsViewModel Snippets { get; }
 
         [ObservableProperty] private object? _currentPage;
 
@@ -20,7 +22,8 @@ namespace GamebuinoAKA.App.ViewModels
             ISettingsService settings, IProjectService projects, ITemplateService templates,
             IBuildService build, IGitService git, IVSCodeService vscode,
             IApplicationLauncher launcher, IPlatformIOService pio, IEspIdfService idf,
-            AssetService asset, IFileDialogService files, IDialogService dialogs)
+            AssetService asset, ISoundBankService soundBank, ICodeSnippetService snippets,
+            IFileDialogService files, IDialogService dialogs)
         {
             Home = new HomeViewModel(this);
             Projects = new ProjectsViewModel(projects, build, git, vscode, launcher, settings, this, dialogs);
@@ -28,6 +31,8 @@ namespace GamebuinoAKA.App.ViewModels
             Settings = new SettingsViewModel(settings, pio, idf, vscode, files);
             SpriteEditor = new SpriteEditorViewModel(asset, settings, files, dialogs);
             TilemapEditor = new TilemapEditorViewModel(asset, files);
+            SoundBank = new SoundBankViewModel(soundBank, projects, launcher, files);
+            Snippets = new SnippetsViewModel(snippets);
 
             NavigateToProjects();
         }
@@ -38,5 +43,7 @@ namespace GamebuinoAKA.App.ViewModels
         [RelayCommand] public void NavigateToSettings() => CurrentPage = Settings;
         [RelayCommand] public void NavigateToSpriteEditor() => CurrentPage = SpriteEditor;
         [RelayCommand] public void NavigateToTilemapEditor() => CurrentPage = TilemapEditor;
+        [RelayCommand] public void NavigateToSoundBank() => CurrentPage = SoundBank;
+        [RelayCommand] public void NavigateToSnippets() => CurrentPage = Snippets;
     }
 }

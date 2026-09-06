@@ -1,430 +1,88 @@
-# Gamebuino AKA IDE — Avalonia Edition
+# Gamebuino AKA IDE — édition Linux (Avalonia)
 
-[![Build and test Linux](https://github.com/Jicehel-Aka/AKA-IDE-Linux-/actions/workflows/linux.yml/badge.svg?branch=avalonia)](https://github.com/Jicehel-Aka/AKA-IDE-Linux-/actions/workflows/linux.yml)
-
-Version multiplateforme en cours de développement de **Gamebuino AKA IDE**.
-
-Gamebuino AKA IDE est un launcher et un ensemble d’outils pour faciliter le développement de jeux destinés à la console **Gamebuino AKA**, basée sur un ESP32-S3 avec écran 320×240.
-
-> [!WARNING]
-> Ce dépôt correspond au portage en cours de l’ancienne application Windows WPF vers **.NET 10 + Avalonia UI**.
->
-> Certaines fonctionnalités historiques peuvent être encore en cours de migration.  
-> La version WPF de référence est conservée dans [`legacy-wpf/`](legacy-wpf/).
-
----
-
-## Objectif du projet
-
-L’application ne cherche pas à remplacer :
-
-- VS Code ;
-- PlatformIO ;
-- Git ;
-- esptool ;
-- la toolchain ESP32.
-
-Elle fournit une interface simplifiée autour de ces outils, ainsi que des éditeurs d’assets Gamebuino AKA.
-
-```text
-Gamebuino AKA IDE
-        │
-        ├── Gestion de projets et templates
-        ├── Git
-        ├── VS Code
-        ├── PlatformIO
-        │   ├── Build
-        │   ├── Upload / Flash
-        │   └── Serial Monitor
-        │
-        ├── Éditeur de sprites
-        ├── Éditeur de tilemaps
-        ├── Banque de sons
-        └── Snippets C++
-```
-
----
-
-## Technologies
-
-| Élément | Technologie |
-|---|---|
-| Langage | C# |
-| Runtime | .NET 10 (`net10.0`) |
-| Interface graphique | Avalonia UI |
-| Architecture | MVVM |
-| MVVM | CommunityToolkit.Mvvm |
-| Injection de dépendances | Microsoft.Extensions.DependencyInjection |
-| Build firmware | PlatformIO CLI |
-| Flash ESP32-S3 | PlatformIO / esptool |
-| Tests | xUnit |
-| CI Linux | GitHub Actions Ubuntu |
-
----
-
-## Plateformes visées
-
-| Plateforme | État |
-|---|---|
-| Linux x64 | Cible prioritaire |
-| Windows | Compatible via Avalonia |
-| macOS | Cible possible à terme |
-
-La nouvelle version ne dépend pas de WPF et ne nécessite pas Wine sous Linux.
-
----
+IDE multiplateforme (.NET 10 + Avalonia) pour créer et gérer des jeux
+**Gamebuino AKA** (ESP32-S3), en **PlatformIO** ou **ESP-IDF**. Port Linux de
+l'IDE WPF d'origine, avec un cœur métier portable et testé.
 
 ## Architecture
 
-```text
-AKA-IDE-Linux-/
-│
-├── src/
-│   ├── GamebuinoAKA.Core/
-│   │   ├── Assets/
-│   │   ├── Graphics/
-│   │   ├── Models/
-│   │   ├── Platform/
-│   │   ├── Services/
-│   │   └── ViewModels/
-│   │
-│   └── GamebuinoAKA.App/
-│       ├── Controls/
-│       ├── Platform/
-│       ├── Themes/
-│       ├── Views/
-│       ├── App.axaml
-│       └── MainWindow.axaml
-│
-├── tests/
-│   └── GamebuinoAKA.Core.Tests/
-│
-├── legacy-wpf/
-│   └── src/
-│       └── GamebuinoAKA.IDE/
-│
-├── .github/
-│   └── workflows/
-│       └── linux.yml
-│
-└── GamebuinoAKA.sln
+```
+legacy-wpf/                     Référence historique WPF (NON compilée)
+src/
+├── GamebuinoAKA.Core/          Métier PORTABLE — aucune dépendance UI
+│   ├── Models/                 données (projets, assets, settings, snippets, sons…)
+│   ├── Platform/               abstractions OS (IPlatformPaths, IProcessRunner,
+│   │                           IToolLocator, IApplicationLauncher) + implémentations
+│   └── Services/               settings, log, projets, templates, build (PIO+ESP-IDF),
+│                               git, assets (SkiaSharp/BGR565), snippets, banque de sons
+└── GamebuinoAKA.App/           UI Avalonia + détails de plateforme
+    ├── Controls/               PixelCanvas, GridCanvas (dessin custom)
+    ├── Services/               dialogues Avalonia, pont SkiaSharp→Avalonia
+    ├── ViewModels/             VM (CommunityToolkit.Mvvm)
+    └── Views/                  vues .axaml
+tests/
+└── GamebuinoAKA.Core.Tests/    tests unitaires (xUnit) — ~80 tests, sans UI
 ```
 
-### Règles d’architecture
+**Règle d'or :** `Core` ne référence jamais WPF, Avalonia, System.Drawing, ni de
+chemin/outil Windows-only. La détection d'OS et les I/O système sont derrière des
+interfaces, implémentées dans `App` (ou dans `Core` quand c'est du .NET pur portable).
 
-`GamebuinoAKA.Core` contient le métier portable et ne doit dépendre ni de WPF ni d’Avalonia.
+## Prérequis
 
-Le projet `Core` ne doit pas référencer :
+- **.NET SDK 10**
+- Pour builder/flasher des jeux : **PlatformIO** (`pio`) et/ou **ESP-IDF** (`idf.py`)
+- Optionnel : **VS Code** (`code`), **git**
+- Linux : appartenir au groupe `dialout` pour l'accès aux ports série
+  (`/dev/ttyUSB*`, `/dev/ttyACM*`)
 
-```text
-System.Windows
-PresentationFramework
-PresentationCore
-WindowsBase
-System.Drawing.Common
-explorer.exe
-Code.exe
-pio.exe
-%APPDATA%
-```
-
-Les détails spécifiques au système d’exploitation sont isolés dans :
-
-```text
-GamebuinoAKA.App/Platform/
-```
-
-Exemples :
-
-| Fonction | Windows | Linux |
-|---|---|---|
-| Ouvrir un dossier | `explorer.exe` | `xdg-open` |
-| Lancer VS Code | `code.exe` / `code.cmd` | `code` |
-| Git | `git.exe` | `git` |
-| PlatformIO | `pio.exe` | `pio` / `platformio` |
-| Ports série | `COM3` | `/dev/ttyACM0`, `/dev/ttyUSB0` |
-| Configuration | `%APPDATA%` | XDG / `~/.config` |
-
----
-
-## Branches importantes
-
-| Branche / tag | Rôle |
-|---|---|
-| `main` | Référence historique de la version WPF |
-| `v1-wpf-final` | Tag de sauvegarde de la dernière version WPF |
-| `avalonia` | Développement du portage .NET 10 / Avalonia / Linux |
-| `github-initial` | Sauvegarde éventuelle de l’état initial du dépôt GitHub |
-
-Le développement du portage doit être effectué sur :
-
-```bash
-git checkout avalonia
-```
-
----
-
-## Fonctionnalités visées
-
-| Fonctionnalité | État cible |
-|---|---|
-| Création de projets depuis templates | Prévue |
-| Gestion de projets récents | Prévue |
-| Clonage de dépôts GitHub | Prévu |
-| Lancement de VS Code | Prévu |
-| Build PlatformIO | Prévu |
-| Flash / Upload PlatformIO | Prévu |
-| Moniteur série PlatformIO | Prévu |
-| Éditeur de sprites | Prévu |
-| Conversion BGR565 AKA | En cours |
-| Export de sprites C++ | Prévu |
-| Éditeur de tilemaps | Prévu |
-| Export de tilemaps C++ | Prévu |
-| Banque de sons | Prévue |
-| Snippets C++ | Prévu |
-
-Les fonctions firmware restent déléguées à PlatformIO :
-
-```text
-Build   → pio run
-Flash   → pio run -t upload
-Monitor → pio device monitor
-```
-
----
-
-## Configuration PlatformIO Gamebuino AKA
-
-Les templates Gamebuino AKA utilisent une configuration PlatformIO semblable à celle-ci :
-
-```ini
-[env:gamebuino_aka]
-platform = espressif32
-board = esp32-s3-devkitc-1
-framework = arduino
-
-monitor_speed = 115200
-
-board_build.flash_size = 16MB
-board_build.psram_type = opi
-
-lib_deps =
-    https://github.com/jmp42/Gamebuino_AKA_lib
-
-build_flags =
-    -DBOARD_HAS_PSRAM
-    -mfix-esp32-psram-cache-issue
-
-upload_protocol = esptool
-```
-
-PlatformIO télécharge automatiquement la toolchain Xtensa ESP32 lors de la première compilation.
-
----
-
-## Prérequis développeur
-
-### Tous systèmes
-
-| Outil | Version recommandée |
-|---|---|
-| Git | 2.x ou plus récent |
-| .NET SDK | 10.x |
-| PlatformIO CLI | dernière version stable |
-| Visual Studio Code | recommandé, mais optionnel pour compiler l’IDE |
-
-Vérifier les outils :
-
-```bash
-git --version
-dotnet --version
-pio --version
-code --version
-```
-
-`pio` et `code` ne sont pas nécessaires pour compiler l’application elle-même, mais seront nécessaires pour les fonctions Build, Flash, Monitor et ouverture de projets.
-
----
-
-## Installation de PlatformIO CLI
-
-PlatformIO peut être installé de plusieurs manières. Par exemple avec Python :
-
-```bash
-python -m pip install --user platformio
-```
-
-Sous Linux, `pio` est souvent installé dans :
-
-```text
-~/.local/bin/pio
-```
-
-Il faut donc vérifier que `~/.local/bin` est présent dans la variable `PATH`.
-
-Exemple :
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-pio --version
-```
-
----
-
-## Prérequis Linux supplémentaires
-
-Pour accéder à une Gamebuino AKA connectée en USB, l’utilisateur doit disposer des droits sur le port série.
-
-Les ports sont généralement nommés :
-
-```text
-/dev/ttyACM0
-/dev/ttyUSB0
-```
-
-Sur Ubuntu/Debian, l’utilisateur doit souvent appartenir au groupe `dialout` :
-
-```bash
-sudo usermod -aG dialout "$USER"
-```
-
-Ferme ensuite la session Linux et reconnecte-toi.
-
-> L’application ne doit pas être lancée avec `sudo`.
-
----
-
-## Compilation depuis les sources
-
-Cloner le dépôt :
-
-```bash
-git clone https://github.com/Jicehel-Aka/AKA-IDE-Linux-.git
-cd AKA-IDE-Linux-
-git checkout avalonia
-```
-
-Restaurer les dépendances :
+## Build & exécution
 
 ```bash
 dotnet restore GamebuinoAKA.sln
+dotnet build   GamebuinoAKA.sln -c Release
+dotnet test    GamebuinoAKA.sln -c Release        # ~80 tests
+dotnet run --project src/GamebuinoAKA.App          # lance l'IDE
 ```
 
-Compiler :
+La CI GitHub Actions (`.github/workflows/ci.yml`) rejoue restore + build + test
+sur Ubuntu à chaque push sur la branche `avalonia`.
 
-```bash
-dotnet build GamebuinoAKA.sln -c Release
-```
+## Fonctionnalités
 
-Exécuter les tests :
+- **Projets** : scan du workspace, Build / Flash / Monitor (PlatformIO **et**
+  ESP-IDF), ouverture dans VS Code / l'explorateur de fichiers, suppression,
+  clonage GitHub, sortie en direct.
+- **Nouveau projet** : PlatformIO (Arduino) ou ESP-IDF (coquille + composants CMake).
+- **Éditeur de sprites** : import image/planche, sélection au glisser, recadrage,
+  réduction (proportions/lissage), transparence par couleur-clé, conversion C++,
+  formats ré-éditables `.gbspr`. Couleurs **BGR565** (ordre lib AKA).
+- **Éditeur de tilemaps** : tileset, palette de tuiles, calques fond/premier plan,
+  peinture, export C++, `.gbmap`.
+- **Banque de sons** : scan des projets, import, lecture (via lecteur système),
+  classement (FX/musique) — `.wav`, `.pmf`, en-têtes `.h`.
+- **Procédures (snippets)** : bibliothèque de blocs de code PlatformIO et ESP-IDF,
+  injectables dans les fichiers générés.
+- **Paramètres** : chemins outils, ESP-IDF (export.sh, port série), auto-détection.
 
-```bash
-dotnet test GamebuinoAKA.sln -c Release
-```
+## Notes de portage (WPF → Avalonia/Linux)
 
-Lancer l’application en développement :
+- **Images** : `System.Drawing` → **SkiaSharp** (multiplateforme, sans licence
+  contraignante). Le format sprite reste du BGR565 truecolor (vérifié par tests).
+- **Chemins** : `%APPDATA%` → **XDG** (`$XDG_CONFIG_HOME`, `$XDG_DATA_HOME`, …).
+- **ESP-IDF** : `export.bat`/`cmd` → `export.sh`/`bash` ; ports `/dev/ttyUSB*`.
+- **Processus** : `ProcessStartInfo.ArgumentList` (jamais de commande shell
+  concaténée) ; outils localisés via `IToolLocator` (jamais de `.exe` en dur).
+- **Audio** : `System.Media.SoundPlayer` (Win32) → ouverture via le lecteur système.
+- **MVVM** : `Microsoft.Toolkit.Mvvm` → `CommunityToolkit.Mvvm`.
 
-```bash
-dotnet run --project src/GamebuinoAKA.App/GamebuinoAKA.App.csproj
-```
+## Statut
 
----
-
-## Publication Linux
-
-Créer un binaire Linux x64 autonome :
-
-```bash
-dotnet publish src/GamebuinoAKA.App/GamebuinoAKA.App.csproj \
-  -c Release \
-  -r linux-x64 \
-  --self-contained true \
-  -p:PublishSingleFile=true \
-  -p:IncludeNativeLibrariesForSelfExtract=true \
-  -o artifacts/linux-x64
-```
-
-Le résultat est créé dans :
-
-```text
-artifacts/linux-x64/
-```
-
-Sous Linux, rendre l’exécutable utilisable si nécessaire :
-
-```bash
-chmod +x artifacts/linux-x64/GamebuinoAKA.App
-```
-
-Puis le lancer :
-
-```bash
-./artifacts/linux-x64/GamebuinoAKA.App
-```
-
----
-
-## GitHub Actions
-
-Chaque `push` sur `main` ou `avalonia` déclenche une compilation Ubuntu via GitHub Actions.
-
-Le workflow effectue :
-
-1. installation de .NET 10 ;
-2. restauration NuGet ;
-3. vérification qu’aucune dépendance WPF n’est introduite dans `Core` ;
-4. compilation de la solution ;
-5. exécution des tests unitaires ;
-6. publication d’un binaire `linux-x64` ;
-7. dépôt du binaire dans les artifacts GitHub Actions.
-
-Les builds sont visibles ici :
-
-<https://github.com/Jicehel-Aka/AKA-IDE-Linux-/actions>
-
----
-
-## Couleurs Gamebuino AKA
-
-La Gamebuino AKA utilise le format documenté dans le projet comme **BGR565 AKA**.
-
-| Couleur | Valeur BGR565 AKA |
-|---|---:|
-| Noir | `0x0000` |
-| Rouge | `0x001F` |
-| Vert | `0x07E0` |
-| Bleu | `0xF800` |
-| Blanc | `0xFFFF` |
-| Magenta transparent | `0xF81F` |
-
-La transparence historique utilise la clé magenta :
-
-```cpp
-0xF81F
-```
-
-Les conversions BGR565 font l’objet de tests unitaires afin d’éviter une inversion rouge/bleu.
-
----
-
-## Ancienne version WPF
-
-Le code Windows/WPF historique est conservé dans :
-
-```text
-legacy-wpf/
-```
-
-Il sert de référence fonctionnelle pendant la migration.
-
-Il ne fait pas partie de la nouvelle solution et ne doit pas être compilé par GitHub Actions dans le cadre du portage Avalonia.
-
----
+Cœur métier **entièrement porté et testé**. UI Avalonia fonctionnelle pour tous
+les écrans. La retouche pixel-par-pixel (palette/undo) de l'éditeur de sprites et
+l'intégration du sélecteur de snippets à la création de projet sont des raffinements
+prévus ; toute la logique sous-jacente est déjà dans `Core`.
 
 ## Licence
 
-MIT — voir [LICENSE](LICENSE).
-
----
-
-Fait avec ❤️ pour la communauté Gamebuino AKA.
+Voir le dépôt d'origine.
