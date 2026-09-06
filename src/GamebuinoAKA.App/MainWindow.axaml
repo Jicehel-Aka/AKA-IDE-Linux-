@@ -1,20 +1,20 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="GamebuinoAKA.App.MainWindow"
-        Title="Gamebuino AKA IDE"
-        Width="1000" Height="700"
-        MinWidth="800" MinHeight="600">
-    <Grid RowDefinitions="Auto,*">
-        <Border Grid.Row="0" Background="#1A1A2E" Padding="16,12">
-            <StackPanel Orientation="Horizontal" Spacing="10">
+        x:CompileBindings="False"
+        Title="Gamebuino AKA IDE" Width="1100" Height="720"
+        MinWidth="900" MinHeight="600">
+    <Grid ColumnDefinitions="210,*">
+        <Border Grid.Column="0" Background="#16162A" Padding="12">
+            <StackPanel Spacing="6">
                 <TextBlock Text="Gamebuino" FontSize="18" FontWeight="Bold" Foreground="#8A63D2"/>
-                <TextBlock Text="AKA IDE — Avalonia" FontSize="14" Foreground="#AAAAAA"
-                           VerticalAlignment="Center"/>
+                <TextBlock Text="AKA IDE" FontSize="13" Foreground="#AAAAAA" Margin="0,0,0,16"/>
+                <Button Content="🏠  Accueil" HorizontalAlignment="Stretch" Command="{Binding NavigateToHomeCommand}"/>
+                <Button Content="📁  Projets" HorizontalAlignment="Stretch" Command="{Binding NavigateToProjectsCommand}"/>
+                <Button Content="➕  Nouveau projet" HorizontalAlignment="Stretch" Command="{Binding NavigateToNewProjectCommand}"/>
+                <Button Content="⚙  Paramètres" HorizontalAlignment="Stretch" Command="{Binding NavigateToSettingsCommand}"/>
             </StackPanel>
         </Border>
-        <TextBlock Grid.Row="1"
-                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                   TextAlignment="Center" Foreground="#CCCCCC"
-                   Text="Squelette Avalonia opérationnel.&#x0a;Les vues et éditeurs seront migrés par lots (voir plan)."/>
+        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}"/>
     </Grid>
 </Window>

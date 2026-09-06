@@ -1,11 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!--
-    GamebuinoAKA.App — UI Avalonia + implémentations de plateforme (Linux/Windows).
-    Multiplateforme : net10.0 (PAS net10.0-windows).
-  -->
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>          <!-- app graphique ; ignoré sous Linux -->
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -17,13 +13,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Avalonia 11.x. Bumpe vers la dernière 11.x si besoin (dotnet add package). -->
     <PackageReference Include="Avalonia" Version="11.2.3" />
     <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
     <PackageReference Include="Avalonia.Diagnostics" Version="11.2.3"
                       Condition="'$(Configuration)' == 'Debug'" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
   </ItemGroup>
 
   <ItemGroup>

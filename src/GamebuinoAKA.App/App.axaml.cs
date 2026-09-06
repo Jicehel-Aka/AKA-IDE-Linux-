@@ -11,8 +11,10 @@ namespace GamebuinoAKA.App
         public override void OnFrameworkInitializationCompleted()
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-                desktop.MainWindow = new MainWindow();
-
+            {
+                var main = Bootstrapper.CreateMainViewModel();
+                desktop.MainWindow = new MainWindow { DataContext = main };
+            }
             base.OnFrameworkInitializationCompleted();
         }
     }
