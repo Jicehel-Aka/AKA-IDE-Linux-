@@ -1,0 +1,11 @@
+# Règles udev pour les consoles Gamebuino META & Classic sous Linux
+# Copier dans /etc/udev/rules.d/99-gamebuino.rules puis :
+# sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# Gamebuino META (Bootloader SAMD21)
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="024d", MODE="0666", GROUP="dialout"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="804d", MODE="0666", GROUP="dialout"
+
+# Périphériques série USB pour téléversement (ESP32-S3 / CP210x / CH340 / CDC)
+KERNEL=="ttyACM*", MODE="0666", GROUP="dialout"
+KERNEL=="ttyUSB*", MODE="0666", GROUP="dialout"

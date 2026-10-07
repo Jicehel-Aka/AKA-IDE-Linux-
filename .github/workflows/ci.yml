@@ -1,0 +1,77 @@
+name: Build and Test Multiplatform (Linux & Windows)
+
+on:
+  push:
+    branches:
+      - main
+      - avalonia
+  pull_request:
+    branches:
+      - main
+      - avalonia
+
+jobs:
+  build:
+    name: Build & Test on ${{ matrix.os-name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            os-name: Linux
+            runtime: linux-x64
+            artifact-name: GamebuinoAKA-IDE-Linux-x64
+          - os: windows-latest
+            os-name: Windows
+            runtime: win-x64
+            artifact-name: GamebuinoAKA-IDE-Windows-x64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Display environment
+        run: dotnet --info
+
+      - name: Restore dependencies
+        run: dotnet restore GamebuinoAKA.sln
+
+      - name: Build solution (Release)
+        run: dotnet build GamebuinoAKA.sln --configuration Release --no-restore
+
+      - name: Run Core tests
+        run: >
+          dotnet test tests/GamebuinoAKA.Core.Tests/GamebuinoAKA.Core.Tests.csproj
+          --configuration Release
+          --no-build
+          --verbosity normal
+
+      - name: Publish application (${{ matrix.runtime }})
+        run: >
+          dotnet publish src/GamebuinoAKA.App/GamebuinoAKA.App.csproj
+          --configuration Release
+          --runtime ${{ matrix.runtime }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          --output artifacts/${{ matrix.runtime }}
+
+      # Spécifique Linux : permissions exécutables + archive tar.gz
+      - name: Package Linux Archive (tar.gz)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          chmod +x artifacts/${{ matrix.runtime }}/GamebuinoAKA.App
+          tar -czvf artifacts/GamebuinoAKA-IDE-linux-x64.tar.gz -C artifacts/${{ matrix.runtime }} .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.os == 'ubuntu-latest' && 'artifacts/GamebuinoAKA-IDE-linux-x64.tar.gz' || format('artifacts/{0}/', matrix.runtime) }}
+          if-no-files-found: error
