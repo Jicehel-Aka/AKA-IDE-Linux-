@@ -13,16 +13,16 @@ on:
       - avalonia
   workflow_dispatch:
     inputs:
+      tag_name:
+        description: 'Numéro de version de la Release (ex: v1.0.0)'
+        required: true
+        type: string
+        default: 'v1.0.0'
       create_release:
-        description: 'Publier une GitHub Release officielle'
+        description: 'Publier la GitHub Release officielle'
         required: false
         type: boolean
         default: true
-      tag_name:
-        description: 'Nom du tag (ex: v1.0.0 — laisser vide si déclenché par un tag git)'
-        required: false
-        type: string
-        default: ''
       prerelease:
         description: 'Marquer comme pré-release'
         required: false
