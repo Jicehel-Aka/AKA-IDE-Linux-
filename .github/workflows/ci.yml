@@ -1,14 +1,36 @@
-name: Build and Test Multiplatform (Linux & Windows)
+name: Build, Test & Release Multiplatform (Linux & Windows)
 
 on:
   push:
     branches:
       - main
       - avalonia
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - main
       - avalonia
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Publier une GitHub Release officielle'
+        required: false
+        type: boolean
+        default: true
+      tag_name:
+        description: 'Nom du tag (ex: v1.0.0 — laisser vide si déclenché par un tag git)'
+        required: false
+        type: string
+        default: ''
+      prerelease:
+        description: 'Marquer comme pré-release'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -67,11 +89,84 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           chmod +x artifacts/${{ matrix.runtime }}/GamebuinoAKA.App
-          tar -czvf artifacts/GamebuinoAKA-IDE-linux-x64.tar.gz -C artifacts/${{ matrix.runtime }} .
+          mkdir -p dist
+          tar -czvf dist/GamebuinoAKA-IDE-linux-x64.tar.gz -C artifacts/${{ matrix.runtime }} .
+
+      # Spécifique Windows : archive zip
+      - name: Package Windows Archive (zip)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Compress-Archive -Path "artifacts/${{ matrix.runtime }}/*" -DestinationPath "dist/GamebuinoAKA-IDE-windows-x64.zip" -Force
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact-name }}
-          path: ${{ matrix.os == 'ubuntu-latest' && 'artifacts/GamebuinoAKA-IDE-linux-x64.tar.gz' || format('artifacts/{0}/', matrix.runtime) }}
+          path: dist/*
           if-no-files-found: error
+
+  release:
+    name: 🚀 Publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == true)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded-artifacts
+
+      - name: Collect archives and generate SHA256 checksums
+        run: |
+          mkdir -p release-assets
+          find downloaded-artifacts -type f ( -name "*.tar.gz" -o -name "*.zip" ) -exec cp {} release-assets/ ;
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+          ls -la
+
+      - name: Determine tag name
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.tag_name }}" ]; then
+            TAG="${{ inputs.tag_name }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="v1.0.0-build-$(date +'%Y%m%d%H%M')"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: "Gamebuino AKA IDE ${{ steps.vars.outputs.tag }}"
+          body: |
+            ### 🎮 Gamebuino AKA IDE — Release ${{ steps.vars.outputs.tag }}
+
+            Binaires autonomes multiplateformes pour l'IDE Gamebuino AKA (console ESP32-S3, écran couleur 320×240).
+
+            #### 📦 Téléchargements disponibles
+            - 🐧 **Linux (x64)** : `GamebuinoAKA-IDE-linux-x64.tar.gz`
+            - 🪟 **Windows (x64)** : `GamebuinoAKA-IDE-windows-x64.zip`
+            - 🔒 **Empreintes de sécurité** : `SHA256SUMS.txt`
+
+            #### 🐧 Utilisation rapide sous Linux
+            ```bash
+            tar -xzf GamebuinoAKA-IDE-linux-x64.tar.gz
+            ./GamebuinoAKA.App
+            ```
+            *Pour flasher l'ESP32-S3 sans accès root, copiez `packaging/linux/99-gamebuino.rules` dans `/etc/udev/rules.d/` et rechargez udev.*
+          draft: false
+          prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
+          generate_release_notes: true
+          files: release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

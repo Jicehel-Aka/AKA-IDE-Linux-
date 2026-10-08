@@ -1,0 +1,25 @@
+name: Release on Tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Nom du tag (ex: v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  publish-release:
+    name: Build & Publish Release Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Information
+        run: |
+          echo "La release complète est automatiquement gérée par .github/workflows/ci.yml"
+          echo "Déclencheur actif sur le tag: ${{ github.ref }}"
