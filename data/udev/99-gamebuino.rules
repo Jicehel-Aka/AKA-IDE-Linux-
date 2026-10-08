@@ -1,11 +1,12 @@
-# Règles udev pour les consoles Gamebuino META & Classic sous Linux
+# Règles udev pour console Gamebuino AKA (ESP32-S3) sous Linux
 # Copier dans /etc/udev/rules.d/99-gamebuino.rules puis lancer:
 # sudo udevadm control --reload-rules && sudo udevadm trigger
 
-# Gamebuino META (Bootloader SAMD21)
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="024d", MODE="0666", GROUP="dialout"
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="804d", MODE="0666", GROUP="dialout"
+# Gamebuino AKA (Espressif ESP32-S3 USB CDC / JTAG & DFU)
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="1001", MODE="0666", GROUP="dialout"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="0002", MODE="0666", GROUP="dialout"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="303a", MODE="0666", GROUP="dialout"
 
-# Périphérique série générique USB pour téléversement Gamebuino
+# Périphérique série générique USB pour téléversement Gamebuino AKA
 KERNEL=="ttyACM*", MODE="0666", GROUP="dialout"
 KERNEL=="ttyUSB*", MODE="0666", GROUP="dialout"

@@ -28,8 +28,16 @@ namespace GamebuinoAKA.Core.Services
             {
                 var srcDir = Path.Combine(projectDir, "src");
                 Directory.CreateDirectory(srcDir);
-                await File.WriteAllTextAsync(Path.Combine(projectDir, "platformio.ini"), "[env:gamebuino_aka]\nplatform = espressif32\nboard = esp32-s3-devkitc-1\nframework = arduino\n");
-                await File.WriteAllTextAsync(Path.Combine(srcDir, "main.cpp"), "#include <Gamebuino-Meta.h>\nGamebuino gb;\nvoid setup() { gb.begin(); }\nvoid loop() { gb.waitForUpdate(); gb.display.clear(); }\n");
+                await File.WriteAllTextAsync(Path.Combine(projectDir, "platformio.ini"), "[env:gamebuino_aka]
+platform = espressif32
+board = esp32-s3-devkitc-1
+framework = arduino
+");
+                await File.WriteAllTextAsync(Path.Combine(srcDir, "main.cpp"), "#include <Gamebuino-AKA.h>
+Gamebuino gb;
+void setup() { gb.begin(); }
+void loop() { gb.waitForUpdate(); gb.display.clear(); }
+");
             }
         }
     }

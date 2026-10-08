@@ -6,9 +6,9 @@ Ce document décrit comment intégrer un assistant intelligent (basé sur Google
 
 ## 🎯 1. Cas d'Usage Principaux
 
-1. **Mentor & Guide de Programmation Gamebuino** :
-   - Répond aux questions sur la bibliothèque C++ Gamebuino (`gb.display`, `gb.buttons`, `gb.sound`, `gb.lights`, `gb.save`).
-   - Adapte le code aux contraintes matérielles de la console (RAM restreinte, framerate à 25-50 FPS, écran 160x128).
+1. **Mentor & Guide de Programmation Gamebuino AKA** :
+   - Répond aux questions sur la bibliothèque C++ Gamebuino AKA (`gb.display`, `gb.buttons`, `gb.sound`, `gb.lights`, `gb.save`).
+   - Adapte le code aux capacités matérielles de la console AKA : microcontrôleur ESP32-S3 Dual-Core Xtensa LX7 @ 240 MHz, 512 Ko SRAM + 8 Mo PSRAM, 60 FPS constants, écran LCD 320x240.
 2. **Diagnostic & Résolution Automatique des Erreurs de Compilation** :
    - En cas d'échec de `pio run` ou `idf.py build`, l'IDE transmet les lignes d'erreurs du compilateur GCC à l'IA.
    - L'IA traduit le message technique en explications claires et propose le patch C++ corrigé.
