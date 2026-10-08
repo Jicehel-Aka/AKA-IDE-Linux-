@@ -190,7 +190,7 @@ namespace GamebuinoAKA.Core.Services
         public string ExportTilemapToCpp(TilemapAsset a)
         {
             string name = SanitizeName(a.Name);
-            var sb = new StringBuilder(a.TotalTiles * 8 + 512);
+            var sb = new StringBuilder((a.MapColumns * a.MapRows) * 8 + 512);
             sb.Append("// Tilemap: ").Append(a.Name).Append(" (").Append(a.MapColumns).Append('x').Append(a.MapRows).Append(" tuiles)\n");
             sb.Append("// Taille tuile: ").Append(a.TileWidth).Append('x').Append(a.TileHeight).Append('\n');
             if (a.UseTransparency)

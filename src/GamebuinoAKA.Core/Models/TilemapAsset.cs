@@ -11,6 +11,7 @@ namespace GamebuinoAKA.Core.Models
         public int TileHeight { get; set; } = 16;
         public int MapColumns { get; set; } = 20;
         public int MapRows { get; set; } = 15;
+        public int TotalTiles => MapColumns * MapRows;
         public byte[] BackgroundLayer { get; set; } = Array.Empty<byte>();
         public byte[] ForegroundLayer { get; set; } = Array.Empty<byte>();
         public ushort[]? TilesetPixels { get; set; }
