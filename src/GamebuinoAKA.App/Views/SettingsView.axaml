@@ -33,6 +33,29 @@
                 <Button Grid.Column="1" Content="Parcourir" Command="{Binding BrowseReferenceCommand}"/>
             </Grid>
 
+            <TextBlock Text="Émulateur (run.sh / aka-front.exe)" Margin="0,8,0,0"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0" Text="{Binding EmulatorPath}" Margin="0,0,8,0"/>
+                <Button Grid.Column="1" Content="Parcourir" Command="{Binding BrowseEmulatorCommand}"/>
+            </Grid>
+
+            <TextBlock Text="Simulateurs PC (facultatif — vide = version embarquée)" FontWeight="SemiBold" Margin="0,14,0,0"/>
+            <TextBlock Text="Simulateur Love2D (aka-love-sim)" Margin="0,4,0,0"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0" Text="{Binding LoveSimPath}" Margin="0,0,8,0"/>
+                <Button Grid.Column="1" Content="Parcourir" Command="{Binding BrowseLoveSimCommand}"/>
+            </Grid>
+            <TextBlock Text="Simulateur MicroPython (aka-py-sim)" Margin="0,6,0,0"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0" Text="{Binding MicroPythonSimPath}" Margin="0,0,8,0"/>
+                <Button Grid.Column="1" Content="Parcourir" Command="{Binding BrowseMicroPythonSimCommand}"/>
+            </Grid>
+            <TextBlock Text="Outil de transfert série (akatransfer.py)" Margin="0,6,0,0"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0" Text="{Binding AkaTransferPath}" Margin="0,0,8,0"/>
+                <Button Grid.Column="1" Content="Parcourir" Command="{Binding BrowseAkaTransferCommand}"/>
+            </Grid>
+
             <TextBlock Text="Chaîne de build par défaut" Margin="0,8,0,0"/>
             <StackPanel Orientation="Horizontal" Spacing="16">
                 <RadioButton GroupName="dbs" Content="ESP-IDF" IsChecked="{Binding DefaultEspIdf}"/>

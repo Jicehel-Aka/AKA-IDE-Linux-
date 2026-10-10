@@ -18,6 +18,7 @@ namespace GamebuinoAKA.App.ViewModels
         private readonly IGitService _git;
         private readonly IVSCodeService _vscode;
         private readonly IApplicationLauncher _launcher;
+        private readonly IEmulatorService _emulator;
         private readonly ISettingsService _settings;
         private readonly INavigationService _nav;
         private readonly IDialogService _dialogs;
@@ -30,11 +31,11 @@ namespace GamebuinoAKA.App.ViewModels
         [ObservableProperty] private string _cloneUrl = string.Empty;
 
         public ProjectsViewModel(IProjectService projects, IBuildService build, IGitService git,
-            IVSCodeService vscode, IApplicationLauncher launcher, ISettingsService settings,
-            INavigationService nav, IDialogService dialogs)
+            IVSCodeService vscode, IApplicationLauncher launcher, IEmulatorService emulator,
+            ISettingsService settings, INavigationService nav, IDialogService dialogs)
         {
             _projects = projects; _build = build; _git = git; _vscode = vscode;
-            _launcher = launcher; _settings = settings; _nav = nav; _dialogs = dialogs;
+            _launcher = launcher; _emulator = emulator; _settings = settings; _nav = nav; _dialogs = dialogs;
         }
 
         public async Task RefreshAsync()
@@ -73,6 +74,26 @@ namespace GamebuinoAKA.App.ViewModels
                 _projects.DeleteProject(p);
                 Items.Remove(p);
             }
+        }
+
+        [RelayCommand]
+        private async Task Emulate(GamebuinoProject? p)
+        {
+            p ??= SelectedProject; if (p is null) return;
+            if (!_emulator.IsAvailable())
+            {
+                AppendLine("Émulateur introuvable. Renseignez son chemin (run.sh / aka-front.exe) dans les Paramètres.");
+                return;
+            }
+            if (_emulator.ResolveFirmware(p) is null)
+            {
+                AppendLine("Compilez d'abord le projet (Build) : aucun firmware trouvé.");
+                return;
+            }
+            IsBusy = true; OutputLog = string.Empty;
+            try { await _emulator.LaunchAsync(p, AppendLine, default); }
+            catch (Exception ex) { AppendLine("Erreur : " + ex.Message); }
+            finally { IsBusy = false; }
         }
 
         [RelayCommand] private void NewProject() => _nav.NavigateToNewProject();

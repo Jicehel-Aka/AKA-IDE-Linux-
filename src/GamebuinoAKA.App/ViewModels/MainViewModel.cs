@@ -15,6 +15,7 @@ namespace GamebuinoAKA.App.ViewModels
         public TilemapEditorViewModel TilemapEditor { get; }
         public SoundBankViewModel SoundBank { get; }
         public SnippetsViewModel Snippets { get; }
+        public ScriptEditorViewModel ScriptEditor { get; }
 
         [ObservableProperty] private object? _currentPage;
 
@@ -23,16 +24,18 @@ namespace GamebuinoAKA.App.ViewModels
             IBuildService build, IGitService git, IVSCodeService vscode,
             IApplicationLauncher launcher, IPlatformIOService pio, IEspIdfService idf,
             AssetService asset, ISoundBankService soundBank, ICodeSnippetService snippets,
+            IEmulatorService emulator, IScriptRuntimeService scriptRuntime,
             IFileDialogService files, IDialogService dialogs)
         {
             Home = new HomeViewModel(this);
-            Projects = new ProjectsViewModel(projects, build, git, vscode, launcher, settings, this, dialogs);
+            Projects = new ProjectsViewModel(projects, build, git, vscode, launcher, emulator, settings, this, dialogs);
             NewProject = new NewProjectViewModel(templates, settings, this, files, dialogs);
-            Settings = new SettingsViewModel(settings, pio, idf, vscode, files);
+            Settings = new SettingsViewModel(settings, pio, idf, vscode, emulator, files);
             SpriteEditor = new SpriteEditorViewModel(asset, settings, files, dialogs);
             TilemapEditor = new TilemapEditorViewModel(asset, files);
             SoundBank = new SoundBankViewModel(soundBank, projects, launcher, files);
             Snippets = new SnippetsViewModel(snippets);
+            ScriptEditor = new ScriptEditorViewModel(scriptRuntime, settings, files);
 
             NavigateToProjects();
         }
@@ -45,5 +48,6 @@ namespace GamebuinoAKA.App.ViewModels
         [RelayCommand] public void NavigateToTilemapEditor() => CurrentPage = TilemapEditor;
         [RelayCommand] public void NavigateToSoundBank() => CurrentPage = SoundBank;
         [RelayCommand] public void NavigateToSnippets() => CurrentPage = Snippets;
+        [RelayCommand] public void NavigateToScriptEditor() => CurrentPage = ScriptEditor;
     }
 }

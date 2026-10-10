@@ -6,5 +6,7 @@ namespace GamebuinoAKA.Core.Services
     {
         Task<string> GetVersionAsync();
         string[] DetectSerialPorts();
+        /// <summary>Détecte le script d'environnement ESP-IDF (export.bat / export.sh) ; vide si introuvable.</summary>
+        string DetectExportScript();
     }
 }
