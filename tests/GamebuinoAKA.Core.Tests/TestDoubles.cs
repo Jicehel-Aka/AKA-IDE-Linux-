@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using GamebuinoAKA.Core.Models;
 using GamebuinoAKA.Core.Platform;
 
 namespace GamebuinoAKA.Core.Tests
