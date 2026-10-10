@@ -68,11 +68,15 @@ jobs:
         run: dotnet build GamebuinoAKA.sln --configuration Release --no-restore
 
       - name: Run Core tests
-        run: >
-          dotnet test tests/GamebuinoAKA.Core.Tests/GamebuinoAKA.Core.Tests.csproj
-          --configuration Release
-          --no-build
-          --verbosity normal
+        shell: bash
+        run: |
+          dotnet test tests/GamebuinoAKA.Core.Tests/GamebuinoAKA.Core.Tests.csproj \
+            --configuration Release --no-build --verbosity normal 2>&1 | tee test-out.txt || true
+          # Remonte les tests en échec + raisons en annotations (diagnostic CI)
+          grep -nE "^[[:space:]]*(Failed|Error Message:|Assert\.|Expected:|Actual:|Stack Trace:)" test-out.txt | head -60 \
+            | while IFS= read -r l; do echo "::error::$l"; done
+          # L'étape échoue si au moins un test a échoué
+          ! grep -qE "^Failed!" test-out.txt
 
       - name: Publish application (${{ matrix.runtime }})
         run: >
