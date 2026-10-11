@@ -27,12 +27,15 @@ namespace GamebuinoAKA.App
             var asset     = new AssetService(settings);
             var soundBank = new SoundBankService(settings);
             var snippets  = new CodeSnippetService(settings);
+            var emulator  = new EmulatorService(settings, runner, tools);
+            var scriptRt  = new ScriptRuntimeService(settings, runner, tools);
 
             var files     = new AvaloniaFileDialogService();
             var dialogs   = new AvaloniaDialogService();
 
             return new MainViewModel(settings, projects, templates, build, git,
-                                     vscode, launcher, pio, idf, asset, soundBank, snippets, files, dialogs);
+                                     vscode, launcher, pio, idf, asset, soundBank, snippets,
+                                     emulator, scriptRt, files, dialogs);
         }
     }
 }
