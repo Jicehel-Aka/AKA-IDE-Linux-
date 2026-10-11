@@ -68,11 +68,17 @@ jobs:
         run: dotnet build GamebuinoAKA.sln --configuration Release --no-restore
 
       - name: Run Core tests
-        run: >
-          dotnet test tests/GamebuinoAKA.Core.Tests/GamebuinoAKA.Core.Tests.csproj
-          --configuration Release
-          --no-build
-          --verbosity normal
+        shell: bash
+        run: |
+          set +e
+          dotnet test tests/GamebuinoAKA.Core.Tests/GamebuinoAKA.Core.Tests.csproj \
+            --configuration Release --no-build --verbosity normal 2>&1 | tee test-out.txt
+          rc=${PIPESTATUS[0]}
+          # Nettoie les codes ANSI puis remonte les tests en échec + raisons en annotations
+          sed -e 's/\x1b\[[0-9;]*m//g' test-out.txt > test-clean.txt
+          grep -nE "Failed |Error Message|Assert|Expected:|Actual:|Exception|Stack Trace" test-clean.txt \
+            | head -80 | while IFS= read -r l; do echo "::error::${l}"; done
+          exit $rc   # verdict = code de sortie réel de dotnet test
 
       - name: Publish application (${{ matrix.runtime }})
         run: >
