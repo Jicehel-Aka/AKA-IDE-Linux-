@@ -91,7 +91,7 @@ namespace GamebuinoAKA.Core.Tests
         public async Task RunOnPc_Love2D_LaunchesSim_WithProjectDir()
         {
             var (svc, settings, runner, root) = Make();
-            var sim = Path.Combine(root, "aka-love-sim"); File.WriteAllText(sim, "#!/bin/sh");
+            var sim = Path.Combine(root, "akalove-play"); File.WriteAllText(sim, "#!/bin/sh");
             settings.Settings.LoveSimPath = sim;
             var dir = Proj(root, "jeu", d => File.WriteAllText(Path.Combine(d, "main.lua"), "x"));
 

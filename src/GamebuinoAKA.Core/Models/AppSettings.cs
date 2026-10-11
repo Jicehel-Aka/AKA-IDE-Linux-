@@ -16,7 +16,7 @@ namespace GamebuinoAKA.Core.Models
         public string EmulatorPath { get; set; } = string.Empty;
 
         // ── Projets script (MicroPython / Love2D) ───────────────────────────────
-        /// <summary>Simulateur PC Love2D (override). Vide = version embarquée sims/aka-love-sim.</summary>
+        /// <summary>Simulateur PC Love2D (override). Vide = version embarquée sims/akalove-play.</summary>
         public string LoveSimPath { get; set; } = string.Empty;
         /// <summary>Simulateur PC MicroPython (override). Vide = version embarquée sims/aka-py-sim.</summary>
         public string MicroPythonSimPath { get; set; } = string.Empty;

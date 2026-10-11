@@ -13,13 +13,13 @@ namespace GamebuinoAKA.Core.Services
     /// Détection de type + exécution PC (simulateur embarqué) + envoi série (akatransfer).
     ///
     /// Les simulateurs sont EMBARQUÉS avec l'IDE sous &lt;base&gt;/sims/ :
-    ///   aka-love-sim[.exe]  — reproduit l'AKA (320×240 BGR565, 4 voies audio, boutons…)
+    ///   akalove-play[.exe]  — reproduit l'AKA (320×240 BGR565, 4 voies audio, boutons…)
     ///   aka-py-sim[.exe]    — MicroPython + module aka, mêmes limites
     ///   akatransfer.py      — transfert série vers la console
     /// Un chemin configuré dans les Paramètres a toujours la priorité sur l'embarqué.
     ///
     /// Contrat de ligne de commande attendu des simulateurs :
-    ///   aka-love-sim  "&lt;dossier_du_jeu&gt;"      (dossier contenant main.lua/conf.lua)
+    ///   akalove-play  "&lt;dossier_du_jeu&gt;"      (dossier contenant main.lua/conf.lua)
     ///   aka-py-sim    "&lt;script.py&gt;"            (script d'entrée)
     /// </summary>
     public sealed class ScriptRuntimeService : IScriptRuntimeService
@@ -85,7 +85,7 @@ namespace GamebuinoAKA.Core.Services
             };
             if (!string.IsNullOrWhiteSpace(configured) && File.Exists(configured)) return configured!;
 
-            var name = kind == ProjectKind.Love2D ? "aka-love-sim" : "aka-py-sim";
+            var name = kind == ProjectKind.Love2D ? "akalove-play" : "aka-py-sim";
             if (OperatingSystem.IsWindows()) name += ".exe";
             var embedded = Path.Combine(AppContext.BaseDirectory, "sims", name);
             return File.Exists(embedded) ? embedded : string.Empty;

@@ -76,7 +76,7 @@ namespace GamebuinoAKA.App.ViewModels
 
         [RelayCommand]
         private async Task BrowseLoveSim()
-        { var f = await _files.OpenFileAsync("Simulateur Love2D (aka-love-sim)"); if (f != null) LoveSimPath = f; }
+        { var f = await _files.OpenFileAsync("Simulateur Love2D (akalove-play)"); if (f != null) LoveSimPath = f; }
 
         [RelayCommand]
         private async Task BrowseMicroPythonSim()
