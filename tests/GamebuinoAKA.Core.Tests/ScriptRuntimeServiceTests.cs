@@ -13,6 +13,7 @@ namespace GamebuinoAKA.Core.Tests
         private static (ScriptRuntimeService svc, SettingsService settings, RecordingProcessRunner runner, string root) Make()
         {
             var paths = new TempPlatformPaths();
+            Directory.CreateDirectory(paths.Root);   // le dossier GUID n'existe pas tant qu'on ne le crée pas
             var settings = new SettingsService(paths);
             var runner = new RecordingProcessRunner();
             var tools = new FakeToolLocator { };
