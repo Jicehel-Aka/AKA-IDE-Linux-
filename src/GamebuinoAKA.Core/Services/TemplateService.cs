@@ -31,6 +31,123 @@ namespace GamebuinoAKA.Core.Services
         }
 
         // ═══════════════════════════════════════════════════════════════════════
+        //  MicroPython (script .py) — exécuté par aka-py-sim sur PC, par
+        //  l'interpréteur MicroPython-AKA sur la console.
+        // ═══════════════════════════════════════════════════════════════════════
+        public async Task CreateMicroPythonProjectAsync(string projectName, string destinationFolder)
+        {
+            var projectDir = Path.Combine(destinationFolder, projectName);
+            Directory.CreateDirectory(projectDir);
+
+            await Write(projectDir, "main.py", MicroPythonMainPy(projectName));
+            await Write(projectDir, "README.md", MicroPythonReadme(projectName));
+
+            // Copie le cadre (game8266.py, upygame.py, ...) embarqué avec l'IDE
+            // sous <base>/Templates/micropython/framework/. Le main.py d'exemple
+            // en dépend (import game8266). Sans ces fichiers, le projet ne
+            // tournerait pas : on laisse alors une note explicite.
+            var framework = Path.Combine(AppContext.BaseDirectory, "Templates", "micropython", "framework");
+            if (Directory.Exists(framework))
+            {
+                foreach (var f in Directory.GetFiles(framework, "*.py"))
+                    File.Copy(f, Path.Combine(projectDir, Path.GetFileName(f)), overwrite: true);
+            }
+            else
+            {
+                await Write(projectDir, "CADRE_MANQUANT.md", MicroPythonFrameworkMissing());
+            }
+        }
+
+        private static string MicroPythonMainPy(string projectName) =>
+@"# -*- coding: utf-8 -*-
+# " + projectName + @" — projet MicroPython pour la console Gamebuino AKA.
+# Généré par Gamebuino AKA IDE.
+#
+# Déplace un carré avec la croix directionnelle ; A change sa couleur.
+# Testez sur PC avec « ▶ Tester (PC) » (aka-py-sim) ou envoyez-le sur la
+# console (bouton « Envoyer »).
+import game8266
+
+g = game8266.Game8266()
+W = g.screenW
+H = g.screenH
+x = W // 2
+y = H // 2
+col = (0, 180, 255)
+
+g.set_controls([""Deplacer: D-Pad"", ""A: changer la couleur""])
+
+
+def run():
+    global x, y, col
+    while True:
+        g.getBtn()                      # lit les boutons (une fois par frame)
+        if g.pressed(g.btnL):
+            x -= 2
+        if g.pressed(g.btnR):
+            x += 2
+        if g.pressed(g.btnU):
+            y -= 2
+        if g.pressed(g.btnD):
+            y += 2
+        if g.justPressed(g.btnA):
+            col = (g.random(60, 255), g.random(60, 255), g.random(60, 255))
+        # garde le carré à l'écran
+        if x < 0:
+            x = 0
+        elif x > W - 8:
+            x = W - 8
+        if y < 10:
+            y = 10
+        elif y > H - 8:
+            y = H - 8
+
+        g.display.fill(0)                       # efface (noir)
+        g.display.text(""" + projectName + @""", 2, 2, 1)
+        g.display.fill_rect(x, y, 8, 8, col)
+        g.display_and_wait()                    # affiche + cadence (~30 fps)
+
+
+run()
+";
+
+        private static string MicroPythonReadme(string projectName) =>
+$@"# {projectName} (MicroPython — Gamebuino AKA)
+
+Projet script `.py` exécuté par l'interpréteur MicroPython de l'AKA
+(et par le simulateur `aka-py-sim` sur PC).
+
+## Fichiers
+- `main.py` — point d'entrée (déplace un carré, A change la couleur).
+- `game8266.py`, `upygame.py`, `urandom.py`, `umachine.py`, `sprite.py` —
+  le **cadre** de compatibilité (API façon pygame/Pokitto au-dessus du module
+  natif `aka`). Gardez-les à côté de `main.py` : le script les importe.
+
+## Tester sur PC
+Bouton « ▶ Tester (PC) » de l'IDE → lance `aka-py-sim main.py`.
+Clavier : flèches = D-Pad, Espace/Entrée = A, X = B, Tab = MENU, Échap = quitter.
+
+## Envoyer sur la console
+Bouton « Envoyer » → copie les fichiers dans `/py` de la carte SD via la liaison
+série. Lancez-les ensuite depuis le menu MicroPython de la console.
+
+## Modules disponibles
+`aka` (écran/boutons/audio/temps), plus `math`, `random`, `json`, `struct`,
+`array`, `collections`, `micropython`, `time`, `sys`, `gc`, `io`.
+";
+
+        private static string MicroPythonFrameworkMissing() =>
+@"# Cadre MicroPython manquant
+
+Les fichiers du cadre (game8266.py, upygame.py, urandom.py, umachine.py,
+sprite.py) n'ont pas pu être copiés : l'IDE ne les a pas trouvés sous
+`Templates/micropython/framework/` à côté de l'exécutable.
+
+Récupérez-les depuis le dépôt MycroPython (`sdcard_files/py/`) et placez-les à
+côté de `main.py` — sinon `import game8266` échouera.
+";
+
+        // ═══════════════════════════════════════════════════════════════════════
         //  PlatformIO (Arduino)
         // ═══════════════════════════════════════════════════════════════════════
         private async Task CreatePlatformIOProjectAsync(string projectName, string template, string projectDir)
