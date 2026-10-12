@@ -4,7 +4,6 @@ using SkiaSharp;
 
 namespace GamebuinoAKA.App.Services
 {
-    /// <summary>Convertit un SKBitmap (Core) en Bitmap Avalonia pour l'affichage.</summary>
     public static class SkiaImageBridge
     {
         public static Bitmap ToAvalonia(SKBitmap bmp)

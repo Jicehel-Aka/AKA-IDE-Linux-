@@ -5,7 +5,6 @@ using GamebuinoAKA.Core.Models;
 
 namespace GamebuinoAKA.Core.Services
 {
-    /// <summary>Route chaque commande vers PlatformIO ou ESP-IDF selon project.IsEspIdf.</summary>
     public sealed class BuildService : IBuildService
     {
         private readonly IPlatformIOService _pio;

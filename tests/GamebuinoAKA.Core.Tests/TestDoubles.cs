@@ -7,6 +7,8 @@ using GamebuinoAKA.Core.Platform;
 
 namespace GamebuinoAKA.Core.Tests
 {
+    // NB : TempPlatformPaths est défini dans CodeSnippetServiceTests.cs (réutilisé ici).
+
     /// <summary>IProcessRunner factice : enregistre chaque requête, renvoie un résultat réglable.</summary>
     public sealed class RecordingProcessRunner : IProcessRunner
     {
@@ -29,11 +31,10 @@ namespace GamebuinoAKA.Core.Tests
         }
     }
 
-    /// <summary>IToolLocator factice : table nom → chemin (ou absent = introuvable).</summary>
+    /// <summary>IToolLocator factice : table nom → chemin (absent = introuvable).</summary>
     public sealed class FakeToolLocator : IToolLocator
     {
         public Dictionary<string, string?> Map { get; } = new();
-
         public string? Locate(string toolName, string? configuredPath = null)
             => Map.TryGetValue(toolName, out var v) ? v : null;
     }

@@ -19,7 +19,6 @@ namespace GamebuinoAKA.Core.Tests
             public Task<string> GetVersionAsync() => Task.FromResult("x");
             public string DetectPioPath() => "pio";
         }
-
         private sealed class FakeIdf : IEspIdfService
         {
             public bool Built;
@@ -29,26 +28,15 @@ namespace GamebuinoAKA.Core.Tests
             public Task CleanAsync(GamebuinoProject p, Action<string>? o, CancellationToken ct = default) => Task.CompletedTask;
             public Task<string> GetVersionAsync() => Task.FromResult("x");
             public string[] DetectSerialPorts() => Array.Empty<string>();
+            public string DetectExportScript() => string.Empty;
         }
 
         [Fact]
         public async Task Dispatches_ToPlatformIO_ForPioProject()
-        {
-            var pio = new FakePio(); var idf = new FakeIdf();
-            var svc = new BuildService(pio, idf);
-            await svc.BuildAsync(new GamebuinoProject { BuildSystem = BuildSystem.PlatformIO }, null);
-            Assert.True(pio.Built);
-            Assert.False(idf.Built);
-        }
+        { var pio = new FakePio(); var idf = new FakeIdf(); await new BuildService(pio, idf).BuildAsync(new GamebuinoProject { BuildSystem = BuildSystem.PlatformIO }, null); Assert.True(pio.Built); Assert.False(idf.Built); }
 
         [Fact]
         public async Task Dispatches_ToEspIdf_ForIdfProject()
-        {
-            var pio = new FakePio(); var idf = new FakeIdf();
-            var svc = new BuildService(pio, idf);
-            await svc.BuildAsync(new GamebuinoProject { BuildSystem = BuildSystem.EspIdf }, null);
-            Assert.True(idf.Built);
-            Assert.False(pio.Built);
-        }
+        { var pio = new FakePio(); var idf = new FakeIdf(); await new BuildService(pio, idf).BuildAsync(new GamebuinoProject { BuildSystem = BuildSystem.EspIdf }, null); Assert.True(idf.Built); Assert.False(pio.Built); }
     }
 }

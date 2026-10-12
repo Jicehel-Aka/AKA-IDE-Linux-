@@ -28,7 +28,7 @@ namespace GamebuinoAKA.App.ViewModels
         [ObservableProperty] private int _mapRows = 15;
         [ObservableProperty] private int _selectedTileIndex;
         [ObservableProperty] private Point _selectedCell = new(-1, -1);
-        [ObservableProperty] private int _activeLayer;        // 0 = fond, 1 = premier plan
+        [ObservableProperty] private int _activeLayer;
         [ObservableProperty] private int _tilesetZoom = 2;
         [ObservableProperty] private int _mapZoom = 2;
         [ObservableProperty] private string _exportedCode = string.Empty;

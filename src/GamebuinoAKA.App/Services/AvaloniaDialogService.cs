@@ -3,12 +3,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
-using Avalonia.Media;
 using GamebuinoAKA.Core.Services;
 
 namespace GamebuinoAKA.App.Services
 {
-    /// <summary>Messages/confirmations Avalonia (fenêtre construite en code).</summary>
     public sealed class AvaloniaDialogService : IDialogService
     {
         private static Window? MainWindow =>
@@ -23,9 +21,8 @@ namespace GamebuinoAKA.App.Services
         private static async Task<bool> ShowAsync(string title, string message, params (string label, bool result)[] buttons)
         {
             var tcs = new TaskCompletionSource<bool>();
-
             var stack = new StackPanel { Margin = new Thickness(20), Spacing = 16 };
-            stack.Children.Add(new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxWidth = 380 });
+            stack.Children.Add(new TextBlock { Text = message, TextWrapping = Avalonia.Media.TextWrapping.Wrap, MaxWidth = 380 });
 
             var bar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
             var win = new Window

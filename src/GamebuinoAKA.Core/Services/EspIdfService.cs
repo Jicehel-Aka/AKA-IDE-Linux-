@@ -6,16 +6,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using GamebuinoAKA.Core.Models;
 using GamebuinoAKA.Core.Platform;
+using Newtonsoft.Json.Linq;
 
 namespace GamebuinoAKA.Core.Services
 {
-    /// <summary>
-    /// Chaîne ESP-IDF, portable. idf.py doit tourner dans un environnement sourcé
-    /// (export.sh sous Linux, export.bat sous Windows) : on passe donc par un shell
-    /// qui source le script d'export PUIS lance idf.py. Le chemin du script vient
-    /// des Paramètres (IdfExportScript). Les arguments idf.py sont contrôlés
-    /// (répertoire projet, port), pas des entrées libres concaténées.
-    /// </summary>
     public sealed class EspIdfService : IEspIdfService
     {
         private readonly ISettingsService _settings;
@@ -50,35 +44,22 @@ namespace GamebuinoAKA.Core.Services
             var request = BuildRequest(p.FolderPath, sub);
             onOutput?.Invoke($"[ESP-IDF] idf.py -C {p.FolderPath} {sub}");
             var code = await _runner.RunStreamingAsync(request, onOutput, ct).ConfigureAwait(false);
-            onOutput?.Invoke(code == 0
-                ? "[ESP-IDF] Terminé avec succès (exit 0)."
-                : $"[ESP-IDF] Échec (exit {code}).");
+            onOutput?.Invoke(code == 0 ? "[ESP-IDF] Terminé avec succès (exit 0)." : $"[ESP-IDF] Échec (exit {code}).");
         }
 
-        /// <summary>
-        /// Construit la requête shell : source le script d'export puis idf.py.
-        /// Linux :  bash -lc "source '<export.sh>' && idf.py -C '<dir>' <sub>"
-        /// Windows: cmd  /c  "call \"<export.bat>\" && idf.py -C \"<dir>\" <sub>"
-        /// </summary>
         private ProcessRequest BuildRequest(string projectDir, string sub)
         {
             var export = _settings.Settings.IdfExportScript;
-
             if (OperatingSystem.IsWindows())
             {
-                var call = !string.IsNullOrWhiteSpace(export)
-                    ? $"call \"{export}\" && "
-                    : string.Empty;
+                var call = !string.IsNullOrWhiteSpace(export) ? $"call \"{export}\" && " : string.Empty;
                 var cmd = $"{call}idf.py -C \"{projectDir}\" {sub}";
                 return new ProcessRequest("cmd.exe", new[] { "/c", cmd }, projectDir);
             }
             else
             {
-                var source = !string.IsNullOrWhiteSpace(export)
-                    ? $"source \"{export}\" && "
-                    : string.Empty;
+                var source = !string.IsNullOrWhiteSpace(export) ? $"source \"{export}\" && " : string.Empty;
                 var cmd = $"{source}idf.py -C \"{projectDir}\" {sub}";
-                // -l : shell de login (charge le profil, utile si l'env IDF y est configuré)
                 return new ProcessRequest("bash", new[] { "-lc", cmd }, projectDir);
             }
         }
@@ -89,8 +70,7 @@ namespace GamebuinoAKA.Core.Services
             {
                 var req = BuildRequestRaw("idf.py --version");
                 var result = await _runner.RunAsync(req);
-                var v = result.StandardOutput.Trim();
-                return string.IsNullOrEmpty(v) ? "Non détecté" : v;
+                return result.StandardOutput.Trim();
             }
             catch { return "Non détecté"; }
         }
@@ -107,16 +87,18 @@ namespace GamebuinoAKA.Core.Services
             return new ProcessRequest("bash", new[] { "-lc", source + idfCommand });
         }
 
-        /// <summary>
-        /// Ports série candidats. Linux : /dev/ttyUSB* et /dev/ttyACM* (les vrais
-        /// ports USB-série ; /dev/ttyS* ne sont presque jamais l'AKA). Windows : à
-        /// compléter côté App si besoin (SerialPort.GetPortNames).
-        /// </summary>
+        /// <summary>Ports série candidats (Windows : COM* ; Linux : /dev/ttyUSB*, /dev/ttyACM*).</summary>
         public string[] DetectSerialPorts()
         {
             if (OperatingSystem.IsWindows())
-                return Array.Empty<string>();
-
+            {
+                try
+                {
+                    return System.IO.Ports.SerialPort.GetPortNames()
+                        .Distinct().OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
+                }
+                catch { return Array.Empty<string>(); }
+            }
             try
             {
                 var ports = new List<string>();
@@ -126,6 +108,104 @@ namespace GamebuinoAKA.Core.Services
                 return ports.OrderBy(p => p, StringComparer.Ordinal).ToArray();
             }
             catch { return Array.Empty<string>(); }
+        }
+
+        /// <summary>
+        /// Localise le script d'environnement ESP-IDF (export.bat / export.sh).
+        /// Windows : esp_idf.json (extension VS Code) puis frameworks\esp-idf-*.
+        /// Linux : IDF_PATH puis ~/esp/esp-idf, /opt/esp-idf.
+        /// </summary>
+        public string DetectExportScript()
+        {
+            var cfg = _settings.Settings.IdfExportScript;
+            if (!string.IsNullOrWhiteSpace(cfg) && File.Exists(cfg)) return cfg;
+
+            var user = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var toolsPath = Environment.GetEnvironmentVariable("IDF_TOOLS_PATH");
+
+            if (OperatingSystem.IsWindows())
+            {
+                foreach (var json in new[]
+                {
+                    toolsPath is null ? null : Path.Combine(toolsPath, "esp_idf.json"),
+                    Path.Combine(user, ".espressif", "esp_idf.json"),
+                    @"C:\ESP-IDF\esp_idf.json", @"C:\Espressif\esp_idf.json"
+                })
+                {
+                    var dir = ReadIdfPathFromJson(json);
+                    if (dir != null)
+                    {
+                        var e = Path.Combine(dir, "export.bat");
+                        if (File.Exists(e)) return e;
+                    }
+                }
+                foreach (var root in new[] { toolsPath, @"C:\ESP-IDF", @"C:\Espressif",
+                                             Path.Combine(user, "esp"), Path.Combine(user, "Espressif") })
+                {
+                    if (string.IsNullOrEmpty(root)) continue;
+                    foreach (var d in Frameworks(root))
+                    {
+                        var e = Path.Combine(d, "export.bat");
+                        if (File.Exists(e)) return e;
+                    }
+                    var e2 = Path.Combine(root, "export.bat");
+                    if (File.Exists(e2)) return e2;
+                }
+            }
+            else
+            {
+                var env = Environment.GetEnvironmentVariable("IDF_PATH");
+                if (!string.IsNullOrEmpty(env))
+                {
+                    var e = Path.Combine(env, "export.sh");
+                    if (File.Exists(e)) return e;
+                }
+                foreach (var d in new[]
+                {
+                    Path.Combine(user, "esp", "esp-idf"), "/opt/esp-idf", "/opt/esp/esp-idf",
+                })
+                {
+                    var e = Path.Combine(d, "export.sh");
+                    if (File.Exists(e)) return e;
+                }
+                var espRoot = Path.Combine(user, "esp");
+                foreach (var d in Frameworks(espRoot))
+                {
+                    var e = Path.Combine(d, "export.sh");
+                    if (File.Exists(e)) return e;
+                }
+            }
+            return string.Empty;
+        }
+
+        private static IEnumerable<string> Frameworks(string root)
+        {
+            foreach (var baseDir in new[] { Path.Combine(root, "frameworks"), root })
+            {
+                if (!Directory.Exists(baseDir)) continue;
+                string[] dirs;
+                try { dirs = Directory.GetDirectories(baseDir, "esp-idf*"); }
+                catch { continue; }
+                foreach (var d in dirs.OrderByDescending(x => x)) yield return d;
+            }
+        }
+
+        private static string? ReadIdfPathFromJson(string? jsonPath)
+        {
+            if (string.IsNullOrEmpty(jsonPath) || !File.Exists(jsonPath)) return null;
+            try
+            {
+                var root = JObject.Parse(File.ReadAllText(jsonPath));
+                var selected = (string?)root["idfSelectedId"];
+                if (root["idfInstalled"] is JObject installed)
+                {
+                    if (selected != null && (string?)installed[selected]?["path"] is string sp) return sp;
+                    foreach (var prop in installed.Properties())
+                        if ((string?)prop.Value["path"] is string p) return p;
+                }
+            }
+            catch { /* json illisible */ }
+            return null;
         }
     }
 }

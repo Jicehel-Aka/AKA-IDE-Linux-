@@ -9,7 +9,6 @@ using GamebuinoAKA.Core.Services;
 
 namespace GamebuinoAKA.App.Services
 {
-    /// <summary>Dialogues fichier Avalonia (StorageProvider) — implémente IFileDialogService.</summary>
     public sealed class AvaloniaFileDialogService : IFileDialogService
     {
         private static Window? MainWindow =>

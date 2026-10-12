@@ -4,10 +4,6 @@ using GamebuinoAKA.Core.Platform;
 
 namespace GamebuinoAKA.App.Platform
 {
-    /// <summary>
-    /// Chemins Windows — reproduit le comportement de la version WPF d'origine :
-    /// config sous %APPDATA%\GamebuinoAKA, workspace sous Documents\GamebuinoAKA.
-    /// </summary>
     public sealed class WindowsPlatformPaths : IPlatformPaths
     {
         private const string AppName = "GamebuinoAKA";

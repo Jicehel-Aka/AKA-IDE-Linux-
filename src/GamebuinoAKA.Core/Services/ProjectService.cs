@@ -15,10 +15,6 @@ namespace GamebuinoAKA.Core.Services
             _settingsService = settingsService;
         }
 
-        /// <summary>
-        /// Scanne le workspace : un dossier est un projet s'il contient un
-        /// platformio.ini (PlatformIO) OU un CMakeLists.txt racine (ESP-IDF).
-        /// </summary>
         public async Task<List<GamebuinoProject>> ScanWorkspaceAsync()
         {
             var workspace = _settingsService.Settings.WorkspaceFolder;
@@ -74,18 +70,15 @@ namespace GamebuinoAKA.Core.Services
 
         public void DeleteProject(GamebuinoProject project)
         {
-            if (Directory.Exists(project.FolderPath))
-                Directory.Delete(project.FolderPath, recursive: true);
+            if (Directory.Exists(project.FolderPath)) Directory.Delete(project.FolderPath, recursive: true);
             _settingsService.Settings.RecentProjects.Remove(project.FolderPath);
             _settingsService.Save();
         }
 
         private static string DetectTemplate(string folder)
         {
-            // ESP-IDF : app_main.cpp
             var appMain = Path.Combine(folder, "main", "app_main.cpp");
             if (File.Exists(appMain)) return "esp-idf";
-
             var mainCpp = Path.Combine(folder, "src", "main.cpp");
             if (!File.Exists(mainCpp)) return "empty";
             var content = File.ReadAllText(mainCpp);

@@ -13,5 +13,6 @@ namespace GamebuinoAKA.Core.Services
         SoundAsset ImportFile(string filePath, SoundBank bank);
         void RemoveAsset(SoundAsset asset, SoundBank bank);
         void UpdateAsset(SoundAsset updated, SoundBank bank);
+        string AddToProject(SoundAsset asset, GamebuinoProject project);
     }
 }

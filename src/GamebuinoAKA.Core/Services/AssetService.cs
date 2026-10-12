@@ -9,11 +9,6 @@ using SkiaSharp;
 
 namespace GamebuinoAKA.Core.Services
 {
-    /// <summary>
-    /// Pipeline d'assets portable (SkiaSharp) : import/crop/resize, empaquetage
-    /// BGR565 (ordre lib AKA) avec couleur-clé de transparence, export C++ et
-    /// formats ré-éditables .gbspr / .gbmap. Aucune dépendance System.Drawing / UI.
-    /// </summary>
     public sealed class AssetService
     {
         private readonly ISettingsService _settings;
@@ -26,20 +21,16 @@ namespace GamebuinoAKA.Core.Services
         public const string SpriteProjectExt = ".gbspr";
         public const string TilemapProjectExt = ".gbmap";
 
-        // ── Conversion couleur (format-aware) ────────────────────────────────────
-
-        /// <summary>Empaquette une couleur RVB en 16 bits selon le format.</summary>
         public static ushort Pack(byte r, byte g, byte b, ColorFormat fmt)
         {
             int r5 = r >> 3, g6 = g >> 2, b5 = b >> 3;
             return fmt == ColorFormat.Bgr565Aka
-                ? (ushort)(r5 | (g6 << 5) | (b5 << 11))   // R bas, B haut (lib AKA)
-                : (ushort)((r5 << 11) | (g6 << 5) | b5);  // R haut, B bas (standard)
+                ? (ushort)(r5 | (g6 << 5) | (b5 << 11))
+                : (ushort)((r5 << 11) | (g6 << 5) | b5);
         }
 
         public static ushort Pack(SKColor c, ColorFormat fmt) => Pack(c.Red, c.Green, c.Blue, fmt);
 
-        /// <summary>Dépaquette un 16 bits en (r,g,b) selon le format.</summary>
         public static (byte r, byte g, byte b) Unpack(ushort v, ColorFormat fmt)
         {
             int r5, g6, b5;
@@ -62,27 +53,18 @@ namespace GamebuinoAKA.Core.Services
             return new SKColor(r, g, b, 255);
         }
 
-        // ── Outils image (SkiaSharp) ─────────────────────────────────────────────
-
-        /// <summary>Charge une image décodée (PNG/BMP/JPG…).</summary>
         public SKBitmap LoadArgb(string path)
             => SKBitmap.Decode(path) ?? throw new InvalidOperationException($"Image illisible : {path}");
 
-        /// <summary>Rogne une région (coordonnées image, clampée).</summary>
         public SKBitmap Crop(SKBitmap src, int x, int y, int w, int h)
         {
-            var rect = SKRectI.Intersect(SKRectI.Create(x, y, w, h),
-                                         new SKRectI(0, 0, src.Width, src.Height));
-            if (rect.Width <= 0 || rect.Height <= 0)
-                throw new ArgumentException("Sélection vide.");
-
+            var rect = SKRectI.Intersect(SKRectI.Create(x, y, w, h), new SKRectI(0, 0, src.Width, src.Height));
+            if (rect.Width <= 0 || rect.Height <= 0) throw new ArgumentException("Sélection vide.");
             using var subset = new SKBitmap();
-            if (!src.ExtractSubset(subset, rect))
-                throw new InvalidOperationException("Rognage impossible.");
-            return subset.Copy();   // copie indépendante (ExtractSubset partage les pixels)
+            if (!src.ExtractSubset(subset, rect)) throw new InvalidOperationException("Rognage impossible.");
+            return subset.Copy();
         }
 
-        /// <summary>Redimensionne (bicubique haute qualité si smooth, sinon au plus proche).</summary>
         public SKBitmap Resize(SKBitmap src, int w, int h, bool smooth)
         {
             w = Math.Max(1, w); h = Math.Max(1, h);
@@ -91,7 +73,6 @@ namespace GamebuinoAKA.Core.Services
             return dst ?? throw new InvalidOperationException("Redimensionnement impossible.");
         }
 
-        /// <summary>Empaquète un bitmap en uint16 (alpha &lt; 128 → couleur-clé).</summary>
         public static ushort[] PackBitmap(SKBitmap bmp, ColorFormat fmt, ushort transparentKey)
         {
             int w = bmp.Width, h = bmp.Height;
@@ -105,25 +86,19 @@ namespace GamebuinoAKA.Core.Services
             return outData;
         }
 
-        /// <summary>Reconstruit un bitmap éditable depuis des pixels packés.</summary>
-        public SKBitmap UnpackToBitmap(ushort[] data, int w, int h, ColorFormat fmt,
-            bool useTransparency, ushort key)
+        public SKBitmap UnpackToBitmap(ushort[] data, int w, int h, ColorFormat fmt, bool useTransparency, ushort key)
         {
             var bmp = new SKBitmap(w, h, SKColorType.Rgba8888, SKAlphaType.Unpremul);
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                 {
                     ushort v = (y * w + x) < data.Length ? data[y * w + x] : (ushort)0;
-                    bmp.SetPixel(x, y, useTransparency && v == key
-                        ? SKColors.Transparent
-                        : UnpackColor(v, fmt));
+                    bmp.SetPixel(x, y, useTransparency && v == key ? SKColors.Transparent : UnpackColor(v, fmt));
                 }
             return bmp;
         }
 
-        /// <summary>Construit un SpriteAsset packé à partir d'un bitmap de travail.</summary>
-        public SpriteAsset BuildSprite(SKBitmap bmp, string name, ColorFormat fmt,
-            ushort key, bool useTransparency, int frameW = 0, int frameH = 0, int frameCount = 1)
+        public SpriteAsset BuildSprite(SKBitmap bmp, string name, ColorFormat fmt, ushort key, bool useTransparency, int frameW = 0, int frameH = 0, int frameCount = 1)
         {
             if (frameW <= 0) frameW = bmp.Width;
             if (frameH <= 0) frameH = bmp.Height;
@@ -141,8 +116,6 @@ namespace GamebuinoAKA.Core.Services
                 PixelData = PackBitmap(bmp, fmt, key)
             };
         }
-
-        // ── Import (asynchrone) ──────────────────────────────────────────────────
 
         public Task<SpriteAsset> ImportSpriteAsync(string imagePath) =>
             Task.Run(() =>
@@ -163,8 +136,7 @@ namespace GamebuinoAKA.Core.Services
                 var key = _settings.Settings.DefaultTransparentKey;
                 int cols = frameWidth > 0 ? bmp.Width / frameWidth : 1;
                 int rows = frameHeight > 0 ? bmp.Height / frameHeight : 1;
-                var a = BuildSprite(bmp, Path.GetFileNameWithoutExtension(imagePath), fmt, key, true,
-                    frameWidth, frameHeight, Math.Max(1, cols * rows));
+                var a = BuildSprite(bmp, Path.GetFileNameWithoutExtension(imagePath), fmt, key, true, frameWidth, frameHeight, Math.Max(1, cols * rows));
                 a.SourcePath = imagePath;
                 return a;
             });
@@ -192,8 +164,6 @@ namespace GamebuinoAKA.Core.Services
                 return a;
             });
 
-        // ── Export C++ ───────────────────────────────────────────────────────────
-
         public string ExportSpriteToCpp(SpriteAsset a)
         {
             if (a.PixelData is null) return "// Pas de données pixel";
@@ -201,17 +171,13 @@ namespace GamebuinoAKA.Core.Services
             string fmtLabel = a.ColorFormat == ColorFormat.Bgr565Aka ? "BGR565 (ordre lib AKA)" : "RGB565 standard";
 
             var sb = new StringBuilder(a.PixelData.Length * 8 + 512);
-            sb.Append("// Sprite: ").Append(a.Name)
-              .Append(" (").Append(a.Width).Append('x').Append(a.Height).Append(")\n");
-            sb.Append("// Frames: ").Append(a.FrameCount)
-              .Append("  Frame: ").Append(a.FrameWidth).Append('x').Append(a.FrameHeight).Append('\n');
+            sb.Append("// Sprite: ").Append(a.Name).Append(" (").Append(a.Width).Append('x').Append(a.Height).Append(")\n");
+            sb.Append("// Frames: ").Append(a.FrameCount).Append("  Frame: ").Append(a.FrameWidth).Append('x').Append(a.FrameHeight).Append('\n');
             sb.Append("// Format couleur: ").Append(fmtLabel).Append('\n');
             if (a.UseTransparency)
             {
-                sb.Append("// Transparence: couleur-clé 0x").Append(a.TransparentKey.ToString("X4"))
-                  .Append(" — use_transparency=true dans graphics_draw_bitmap565()\n");
-                sb.Append("#define ").Append(name).Append("_TRANSPARENT 0x")
-                  .Append(a.TransparentKey.ToString("X4")).Append('\n');
+                sb.Append("// Transparence: couleur-clé 0x").Append(a.TransparentKey.ToString("X4")).Append(" — use_transparency=true dans graphics_draw_bitmap565()\n");
+                sb.Append("#define ").Append(name).Append("_TRANSPARENT 0x").Append(a.TransparentKey.ToString("X4")).Append('\n');
             }
 
             AppendHexBlock(sb, $"const uint16_t {name}[] PROGMEM", a.PixelData, 16);
@@ -224,13 +190,11 @@ namespace GamebuinoAKA.Core.Services
         public string ExportTilemapToCpp(TilemapAsset a)
         {
             string name = SanitizeName(a.Name);
-            var sb = new StringBuilder(a.TotalTiles * 8 + 512);
-            sb.Append("// Tilemap: ").Append(a.Name)
-              .Append(" (").Append(a.MapColumns).Append('x').Append(a.MapRows).Append(" tuiles)\n");
+            var sb = new StringBuilder((a.MapColumns * a.MapRows) * 8 + 512);
+            sb.Append("// Tilemap: ").Append(a.Name).Append(" (").Append(a.MapColumns).Append('x').Append(a.MapRows).Append(" tuiles)\n");
             sb.Append("// Taille tuile: ").Append(a.TileWidth).Append('x').Append(a.TileHeight).Append('\n');
             if (a.UseTransparency)
-                sb.Append("#define ").Append(name).Append("_TRANSPARENT 0x")
-                  .Append(a.TransparentKey.ToString("X4")).Append('\n');
+                sb.Append("#define ").Append(name).Append("_TRANSPARENT 0x").Append(a.TransparentKey.ToString("X4")).Append('\n');
             sb.Append('\n');
 
             AppendByteRows(sb, $"const uint8_t {name}_bg[] PROGMEM", a.BackgroundLayer, a.MapColumns);
@@ -240,23 +204,17 @@ namespace GamebuinoAKA.Core.Services
             return sb.ToString();
         }
 
-        // ── Sauvegarde ré-éditable (JSON) ────────────────────────────────────────
-
         public void SaveSprite(SpriteAsset a, string path) =>
             File.WriteAllText(path, JsonConvert.SerializeObject(a, Formatting.Indented));
 
         public SpriteAsset LoadSprite(string path) =>
-            JsonConvert.DeserializeObject<SpriteAsset>(File.ReadAllText(path))
-            ?? throw new InvalidDataException("Fichier sprite illisible.");
+            JsonConvert.DeserializeObject<SpriteAsset>(File.ReadAllText(path)) ?? throw new InvalidDataException("Fichier sprite illisible.");
 
         public void SaveTilemap(TilemapAsset a, string path) =>
             File.WriteAllText(path, JsonConvert.SerializeObject(a, Formatting.Indented));
 
         public TilemapAsset LoadTilemap(string path) =>
-            JsonConvert.DeserializeObject<TilemapAsset>(File.ReadAllText(path))
-            ?? throw new InvalidDataException("Fichier tilemap illisible.");
-
-        // ── Helpers ──────────────────────────────────────────────────────────────
+            JsonConvert.DeserializeObject<TilemapAsset>(File.ReadAllText(path)) ?? throw new InvalidDataException("Fichier tilemap illisible.");
 
         private static readonly char[] HexDigits = "0123456789ABCDEF".ToCharArray();
 
@@ -267,8 +225,7 @@ namespace GamebuinoAKA.Core.Services
             {
                 if (i % perRow == 0) sb.Append("    ");
                 ushort v = data[i];
-                sb.Append("0x")
-                  .Append(HexDigits[(v >> 12) & 0xF]).Append(HexDigits[(v >> 8) & 0xF])
+                sb.Append("0x").Append(HexDigits[(v >> 12) & 0xF]).Append(HexDigits[(v >> 8) & 0xF])
                   .Append(HexDigits[(v >> 4) & 0xF]).Append(HexDigits[v & 0xF]);
                 if (i < data.Length - 1) sb.Append(", ");
                 if ((i + 1) % perRow == 0) sb.Append('\n');

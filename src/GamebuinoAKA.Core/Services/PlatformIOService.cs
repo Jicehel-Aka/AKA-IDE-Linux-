@@ -6,11 +6,6 @@ using GamebuinoAKA.Core.Platform;
 
 namespace GamebuinoAKA.Core.Services
 {
-    /// <summary>
-    /// Chaîne PlatformIO, portable : localise « pio » (ou « platformio ») via
-    /// IToolLocator et l'exécute via IProcessRunner avec des arguments séparés.
-    /// Aucun « pio.exe » en dur, aucune commande shell concaténée.
-    /// </summary>
     public sealed class PlatformIOService : IPlatformIOService
     {
         private readonly ISettingsService _settings;
@@ -25,15 +20,11 @@ namespace GamebuinoAKA.Core.Services
         }
 
         public string DetectPioPath()
-            => _tools.Locate("pio", _settings.Settings.PlatformIOPath)
-               ?? _tools.Locate("platformio")
-               ?? string.Empty;
+            => _tools.Locate("pio", _settings.Settings.PlatformIOPath) ?? _tools.Locate("platformio") ?? string.Empty;
 
         private string ResolvePio()
-            => _tools.Locate("pio", _settings.Settings.PlatformIOPath)
-               ?? _tools.Locate("platformio")
-               ?? throw new InvalidOperationException(
-                   "PlatformIO (pio) introuvable. Installez-le ou renseignez son chemin dans les Paramètres.");
+            => _tools.Locate("pio", _settings.Settings.PlatformIOPath) ?? _tools.Locate("platformio")
+               ?? throw new InvalidOperationException("PlatformIO (pio) introuvable. Installez-le ou renseignez son chemin.");
 
         public Task BuildAsync(GamebuinoProject p, Action<string>? o, CancellationToken ct = default)
             => Run(p, o, ct, "run");
@@ -62,8 +53,7 @@ namespace GamebuinoAKA.Core.Services
                 var pio = DetectPioPath();
                 if (string.IsNullOrEmpty(pio)) return "Non détecté";
                 var result = await _runner.RunAsync(new ProcessRequest(pio, new[] { "--version" }));
-                var v = result.StandardOutput.Trim();
-                return string.IsNullOrEmpty(v) ? "Non détecté" : v;
+                return result.StandardOutput.Trim();
             }
             catch { return "Non détecté"; }
         }

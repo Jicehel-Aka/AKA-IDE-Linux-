@@ -16,14 +16,23 @@ namespace GamebuinoAKA.App.ViewModels
         private readonly IFileDialogService _files;
         private readonly IDialogService _dialogs;
 
+        // Libellés des types de projet (l'ordre fixe les préfixes testés plus bas).
+        public const string TypeEspIdf = "ESP-IDF (coquille)";
+        public const string TypePlatformIO = "PlatformIO (Arduino)";
+        public const string TypeMicroPython = "MicroPython (script .py)";
+
         [ObservableProperty] private string _projectName = string.Empty;
         [ObservableProperty] private string _destinationFolder = string.Empty;
-        [ObservableProperty] private bool _isEspIdf = true;
+        [ObservableProperty] private string _selectedProjectType = TypeEspIdf;
         [ObservableProperty] private string _selectedTemplate = "empty";
         [ObservableProperty] private bool _addAudio;
         [ObservableProperty] private string _status = string.Empty;
 
-        public bool IsPlatformIO => !IsEspIdf;
+        public string[] ProjectTypes { get; } = new[] { TypeEspIdf, TypePlatformIO, TypeMicroPython };
+
+        public bool IsEspIdf => SelectedProjectType == TypeEspIdf;
+        public bool IsPlatformIO => SelectedProjectType == TypePlatformIO;
+        public bool IsMicroPython => SelectedProjectType == TypeMicroPython;
 
         public string[] Templates { get; } = new[] { "empty", "hello-world", "game-template" };
 
@@ -32,15 +41,19 @@ namespace GamebuinoAKA.App.ViewModels
         {
             _templates = templates; _settings = settings; _nav = nav; _files = files; _dialogs = dialogs;
             _destinationFolder = settings.Settings.WorkspaceFolder;
-            _isEspIdf = settings.Settings.DefaultBuildSystem == BuildSystem.EspIdf;
-            _selectedTemplate = _isEspIdf ? "esp-idf" : "empty";
+            _selectedProjectType = settings.Settings.DefaultBuildSystem == BuildSystem.PlatformIO
+                ? TypePlatformIO : TypeEspIdf;
+            _selectedTemplate = IsPlatformIO ? "empty" : "esp-idf";
         }
 
-        partial void OnIsEspIdfChanged(bool value)
+        partial void OnSelectedProjectTypeChanged(string value)
         {
+            OnPropertyChanged(nameof(IsEspIdf));
             OnPropertyChanged(nameof(IsPlatformIO));
-            if (value) SelectedTemplate = "esp-idf";
-            else { SelectedTemplate = "empty"; AddAudio = false; }  // audio : ESP-IDF uniquement
+            OnPropertyChanged(nameof(IsMicroPython));
+            if (IsEspIdf) SelectedTemplate = "esp-idf";
+            else if (IsPlatformIO) { SelectedTemplate = "empty"; AddAudio = false; }
+            else { AddAudio = false; }   // MicroPython : pas de template natif ni d'audio ESP-IDF
         }
 
         [RelayCommand]
@@ -62,8 +75,15 @@ namespace GamebuinoAKA.App.ViewModels
 
             try
             {
-                var bs = IsEspIdf ? BuildSystem.EspIdf : BuildSystem.PlatformIO;
-                await _templates.CreateProjectAsync(ProjectName, SelectedTemplate, DestinationFolder, bs, IsEspIdf && AddAudio);
+                if (IsMicroPython)
+                {
+                    await _templates.CreateMicroPythonProjectAsync(ProjectName, DestinationFolder);
+                }
+                else
+                {
+                    var bs = IsEspIdf ? BuildSystem.EspIdf : BuildSystem.PlatformIO;
+                    await _templates.CreateProjectAsync(ProjectName, SelectedTemplate, DestinationFolder, bs, IsEspIdf && AddAudio);
+                }
                 _settings.AddRecentProject(target);
                 await _dialogs.ShowMessageAsync("Projet créé", $"« {ProjectName} » a été créé.");
                 _nav.NavigateToProjects();

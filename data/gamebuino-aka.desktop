@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Gamebuino AKA IDE
+GenericName=IDE pour Gamebuino
+Comment=Environnement de développement C# / Avalonia pour console Gamebuino
+Exec=GamebuinoAKA.App %F
+Icon=gamebuino-aka
+Terminal=false
+Categories=Development;IDE;
+StartupWMClass=GamebuinoAKA.App

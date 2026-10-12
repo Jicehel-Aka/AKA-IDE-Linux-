@@ -1,0 +1,28 @@
+## Build results
+[Bb]in/
+[Oo]bj/
+artifacts/
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+
+## Visual Studio & Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Linux / Mac
+.DS_Store
+*.swp
+*~
+
+## Fichiers de configuration / Banques locales
+.aka-snippets.json
+.aka-soundbank.json
+
+## Fichiers compressés temporaires
+*.zip
+*.tar.gz

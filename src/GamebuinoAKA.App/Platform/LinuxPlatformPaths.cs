@@ -4,7 +4,6 @@ using GamebuinoAKA.Core.Platform;
 
 namespace GamebuinoAKA.App.Platform
 {
-    /// <summary>Chemins conformes à la spec XDG Base Directory (Linux).</summary>
     public sealed class LinuxPlatformPaths : IPlatformPaths
     {
         private const string AppName = "GamebuinoAKA";

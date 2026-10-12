@@ -7,24 +7,16 @@ using Avalonia.Media.Imaging;
 
 namespace GamebuinoAKA.App.Controls
 {
-    /// <summary>
-    /// Affiche un Bitmap au zoom entier (nearest-neighbor) et gère une sélection
-    /// rectangulaire au glisser (coordonnées image). Selection est bindable two-way.
-    /// </summary>
     public class PixelCanvas : Control
     {
         public static readonly StyledProperty<Bitmap?> SourceProperty =
             AvaloniaProperty.Register<PixelCanvas, Bitmap?>(nameof(Source));
-
         public static readonly StyledProperty<int> ZoomProperty =
             AvaloniaProperty.Register<PixelCanvas, int>(nameof(Zoom), 4);
-
         public static readonly StyledProperty<bool> SelectionModeProperty =
             AvaloniaProperty.Register<PixelCanvas, bool>(nameof(SelectionMode));
-
         public static readonly StyledProperty<Rect> SelectionProperty =
-            AvaloniaProperty.Register<PixelCanvas, Rect>(nameof(Selection),
-                defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+            AvaloniaProperty.Register<PixelCanvas, Rect>(nameof(Selection), defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
 
         public Bitmap? Source { get => GetValue(SourceProperty); set => SetValue(SourceProperty, value); }
         public int Zoom { get => GetValue(ZoomProperty); set => SetValue(ZoomProperty, value); }
@@ -37,10 +29,7 @@ namespace GamebuinoAKA.App.Controls
             AffectsMeasure<PixelCanvas>(SourceProperty, ZoomProperty);
         }
 
-        public PixelCanvas()
-        {
-            RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.None);
-        }
+        public PixelCanvas() => RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.None);
 
         private bool _dragging;
         private Point _start;
@@ -59,7 +48,6 @@ namespace GamebuinoAKA.App.Controls
             if (s is null) return;
             int z = Math.Max(1, Zoom);
             int w = s.PixelSize.Width, h = s.PixelSize.Height;
-
             ctx.DrawImage(s, new Rect(0, 0, w, h), new Rect(0, 0, w * z, h * z));
 
             var sel = Selection;
@@ -113,11 +101,7 @@ namespace GamebuinoAKA.App.Controls
 
         protected override void OnPointerReleased(PointerReleasedEventArgs e)
         {
-            if (_dragging)
-            {
-                _dragging = false;
-                e.Pointer.Capture(null);
-            }
+            if (_dragging) { _dragging = false; e.Pointer.Capture(null); }
             base.OnPointerReleased(e);
         }
     }

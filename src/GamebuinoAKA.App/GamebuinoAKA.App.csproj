@@ -10,6 +10,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>GamebuinoAKA.App</RootNamespace>
     <AssemblyName>GamebuinoAKA.App</AssemblyName>
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,10 +21,11 @@
     <PackageReference Include="Avalonia.Diagnostics" Version="11.2.3"
                       Condition="'$(Configuration)' == 'Debug'" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.1.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GamebuinoAKA.Core\GamebuinoAKA.Core.csproj" />
+    <ProjectReference Include="../GamebuinoAKA.Core/GamebuinoAKA.Core.csproj" />
   </ItemGroup>
 
 </Project>

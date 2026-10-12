@@ -28,6 +28,7 @@
                                         <Button Content="Build"   Command="{Binding DataContext.BuildCommand,   RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
                                         <Button Content="Flash"   Command="{Binding DataContext.FlashCommand,   RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
                                         <Button Content="Monitor" Command="{Binding DataContext.MonitorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                        <Button Content="▶ Tester" Command="{Binding DataContext.EmulateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
                                         <Button Content="VS Code" Command="{Binding DataContext.OpenVSCodeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
                                         <Button Content="Dossier" Command="{Binding DataContext.OpenFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
                                         <Button Content="🗑" Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>

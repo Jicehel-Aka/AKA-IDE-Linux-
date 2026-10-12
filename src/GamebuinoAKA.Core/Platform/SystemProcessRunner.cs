@@ -7,10 +7,6 @@ using GamebuinoAKA.Core.Models;
 
 namespace GamebuinoAKA.Core.Platform
 {
-    /// <summary>
-    /// Implémentation via System.Diagnostics.Process (portable Linux/Windows).
-    /// UseShellExecute = false + ArgumentList : pas de shell, espaces gérés.
-    /// </summary>
     public sealed class SystemProcessRunner : IProcessRunner
     {
         public async Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken = default)
@@ -28,8 +24,7 @@ namespace GamebuinoAKA.Core.Platform
             return new ProcessResult(process.ExitCode, stdout.ToString(), stderr.ToString());
         }
 
-        public async Task<int> RunStreamingAsync(ProcessRequest request, Action<string>? onOutput,
-            CancellationToken cancellationToken = default)
+        public async Task<int> RunStreamingAsync(ProcessRequest request, Action<string>? onOutput, CancellationToken cancellationToken = default)
         {
             using var process = Start(request);
             process.OutputDataReceived += (_, e) => { if (e.Data != null) onOutput?.Invoke(e.Data); };
@@ -54,19 +49,13 @@ namespace GamebuinoAKA.Core.Platform
                 StandardOutputEncoding = Encoding.UTF8,
                 StandardErrorEncoding = Encoding.UTF8
             };
-            foreach (var arg in request.Arguments)
-                psi.ArgumentList.Add(arg);   // espaces préservés, pas d'injection shell
-
+            foreach (var arg in request.Arguments) psi.ArgumentList.Add(arg);
             var process = new Process { StartInfo = psi };
-            try
-            {
-                process.Start();
-            }
+            try { process.Start(); }
             catch (Exception ex)
             {
                 process.Dispose();
-                throw new InvalidOperationException(
-                    $"Impossible de lancer « {request.FileName} » : {ex.Message}", ex);
+                throw new InvalidOperationException($"Impossible de lancer « {request.FileName} » : {ex.Message}", ex);
             }
             return process;
         }

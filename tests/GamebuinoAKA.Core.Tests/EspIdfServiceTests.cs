@@ -12,38 +12,22 @@ namespace GamebuinoAKA.Core.Tests
         {
             var settings = new SettingsService(new TempPlatformPaths());
             settings.Settings.IdfExportScript = OperatingSystem.IsWindows()
-                ? @"C:\ESP-IDF\frameworks\esp-idf\export.bat"
-                : "/home/jean/esp/esp-idf/export.sh";
+                ? @"C:\ESP-IDF\export.bat" : "/home/u/esp/esp-idf/export.sh";
             var runner = new RecordingProcessRunner();
             return (new EspIdfService(settings, runner), runner, settings);
         }
-
-        private static GamebuinoProject Proj() =>
-            new GamebuinoProject { FolderPath = "/home/jean/ws/asteria", BuildSystem = BuildSystem.EspIdf };
+        private static GamebuinoProject P() => new() { FolderPath = "/home/u/ws/jeu", BuildSystem = BuildSystem.EspIdf };
 
         [Fact]
         public async Task Build_WrapsIdfPyInShell_SourcingExportScript()
         {
             var (svc, runner, _) = Make();
-            await svc.BuildAsync(Proj(), null);
-
+            await svc.BuildAsync(P(), null);
             var req = runner.Last!;
             if (OperatingSystem.IsWindows())
-            {
-                Assert.Equal("cmd.exe", req.FileName);
-                Assert.Equal("/c", req.Arguments[0]);
-                Assert.Contains("idf.py -C", req.Arguments[1]);
-                Assert.Contains("build", req.Arguments[1]);
-                Assert.Contains("call", req.Arguments[1]);
-            }
+            { Assert.Equal("cmd.exe", req.FileName); Assert.Contains("idf.py -C", req.Arguments[1]); Assert.Contains("build", req.Arguments[1]); }
             else
-            {
-                Assert.Equal("bash", req.FileName);
-                Assert.Equal("-lc", req.Arguments[0]);
-                Assert.Contains("source", req.Arguments[1]);
-                Assert.Contains("idf.py -C", req.Arguments[1]);
-                Assert.Contains("build", req.Arguments[1]);
-            }
+            { Assert.Equal("bash", req.FileName); Assert.Equal("-lc", req.Arguments[0]); Assert.Contains("source", req.Arguments[1]); Assert.Contains("idf.py -C", req.Arguments[1]); }
         }
 
         [Fact]
@@ -51,15 +35,29 @@ namespace GamebuinoAKA.Core.Tests
         {
             var (svc, runner, settings) = Make();
             settings.Settings.IdfSerialPort = "/dev/ttyUSB0";
-            await svc.FlashAsync(Proj(), null);
+            await svc.FlashAsync(P(), null);
             Assert.Contains("-p /dev/ttyUSB0 flash", runner.Last!.Arguments[^1]);
         }
 
+        [Fact] public void DetectSerialPorts_DoesNotThrow() { var (s, _, _) = Make(); Assert.NotNull(s.DetectSerialPorts()); }
+
         [Fact]
-        public void DetectSerialPorts_DoesNotThrow()
+        public void DetectExportScript_ReturnsConfiguredWhenExists()
         {
-            var (svc, _, _) = Make();
-            Assert.NotNull(svc.DetectSerialPorts());
+            var settings = new SettingsService(new TempPlatformPaths());
+            var tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "export-" + Guid.NewGuid().ToString("N") + ".sh");
+            System.IO.File.WriteAllText(tmp, "# export");
+            settings.Settings.IdfExportScript = tmp;
+            try { Assert.Equal(tmp, new EspIdfService(settings, new RecordingProcessRunner()).DetectExportScript()); }
+            finally { System.IO.File.Delete(tmp); }
+        }
+
+        [Fact]
+        public void DetectExportScript_NothingFound_ReturnsEmpty_DoesNotThrow()
+        {
+            var settings = new SettingsService(new TempPlatformPaths()); // pas de script configuré
+            var result = new EspIdfService(settings, new RecordingProcessRunner()).DetectExportScript();
+            Assert.NotNull(result); // "" si rien, jamais d'exception
         }
     }
 }

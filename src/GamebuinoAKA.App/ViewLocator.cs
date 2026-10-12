@@ -5,7 +5,6 @@ using GamebuinoAKA.App.ViewModels;
 
 namespace GamebuinoAKA.App
 {
-    /// <summary>Associe un ViewModel à sa Vue par convention de nom (…ViewModel → …View).</summary>
     public class ViewLocator : IDataTemplate
     {
         public Control Build(object? data)

@@ -5,11 +5,13 @@ namespace GamebuinoAKA.Core.Services
 {
     public interface ITemplateService
     {
+        Task CreateProjectAsync(string projectName, string template, string destinationFolder, BuildSystem buildSystem, bool withAudio = false);
+
         /// <summary>
-        /// Crée un projet. Pour ESP-IDF, withAudio=true génère la plomberie audio
-        /// minimale (module audio.h/.cpp + tâche mixeur + init dans app_main).
+        /// Crée un projet script MicroPython prêt à tourner : un main.py d'exemple
+        /// plus le cadre (game8266.py / upygame.py / urandom.py / umachine.py /
+        /// sprite.py). Exécutable tel quel via « Tester (PC) » (aka-py-sim).
         /// </summary>
-        Task CreateProjectAsync(string projectName, string template,
-            string destinationFolder, BuildSystem buildSystem, bool withAudio = false);
+        Task CreateMicroPythonProjectAsync(string projectName, string destinationFolder);
     }
 }

@@ -1,0 +1,218 @@
+name: Build, Test & Release Multiplatform (Linux & Windows)
+
+on:
+  push:
+    branches:
+      - main
+      - avalonia
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - avalonia
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Numéro de version de la Release (ex: v1.0.0)'
+        required: true
+        type: string
+        default: 'v1.0.0'
+      create_release:
+        description: 'Publier la GitHub Release officielle'
+        required: false
+        type: boolean
+        default: true
+      prerelease:
+        description: 'Marquer comme pré-release'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Test on ${{ matrix.os-name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            os-name: Linux
+            runtime: linux-x64
+            artifact-name: GamebuinoAKA-IDE-Linux-x64
+          - os: windows-latest
+            os-name: Windows
+            runtime: win-x64
+            artifact-name: GamebuinoAKA-IDE-Windows-x64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Display environment
+        run: dotnet --info
+
+      - name: Restore dependencies
+        run: dotnet restore GamebuinoAKA.sln
+
+      - name: Build solution (Release)
+        run: dotnet build GamebuinoAKA.sln --configuration Release --no-restore
+
+      - name: Run Core tests
+        run: >
+          dotnet test tests/GamebuinoAKA.Core.Tests/GamebuinoAKA.Core.Tests.csproj
+          --configuration Release
+          --no-build
+          --verbosity normal
+
+      - name: Publish application (${{ matrix.runtime }})
+        run: >
+          dotnet publish src/GamebuinoAKA.App/GamebuinoAKA.App.csproj
+          --configuration Release
+          --runtime ${{ matrix.runtime }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          --output artifacts/${{ matrix.runtime }}
+
+      # Embarque les simulateurs PC (aka-py-sim MicroPython + akalove-play Love2D)
+      # et akatransfer.py dans <publish>/sims/, récupérés depuis les dernières
+      # releases des dépôts MycroPython et akalove. Non bloquant : si une release
+      # manque, l'IDE se construit quand même (l'utilisateur peut renseigner le
+      # chemin du simulateur dans les Paramètres).
+      - name: Bundle PC simulators (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SIMS="artifacts/${{ matrix.runtime }}/sims"
+          mkdir -p "$SIMS"
+          tmp="$(mktemp -d)"
+          gh release download --repo Jicehel-Aka/MycroPython --pattern 'micropython-aka-sim-linux-x64-*.zip' -D "$tmp/mp"   || true
+          gh release download --repo Jicehel-Aka/akalove       --pattern 'aka-love-sim-linux-x64-*.zip'       -D "$tmp/love" || true
+          ls -A "$tmp/mp"   2>/dev/null | grep -q . && unzip -o "$tmp"/mp/*.zip   -d "$tmp/mpx"   || true
+          ls -A "$tmp/love" 2>/dev/null | grep -q . && unzip -o "$tmp"/love/*.zip -d "$tmp/lovex" || true
+          cp "$tmp"/mpx/aka-py-sim     "$SIMS/" 2>/dev/null || true
+          cp "$tmp"/lovex/akalove-play "$SIMS/" 2>/dev/null || true
+          chmod +x "$SIMS"/* 2>/dev/null || true
+          curl -fsSL -o "$SIMS/akatransfer.py" https://raw.githubusercontent.com/Jicehel-Aka/akalove/main/tools/akatransfer.py || true
+          echo "Contenu de sims/ :"; ls -la "$SIMS" || true
+
+      - name: Bundle PC simulators (Windows)
+        if: matrix.os == 'windows-latest'
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $sims = "artifacts/${{ matrix.runtime }}/sims"
+          New-Item -ItemType Directory -Force -Path $sims | Out-Null
+          $tmp = Join-Path $env:RUNNER_TEMP "sims"
+          New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+          gh release download --repo Jicehel-Aka/MycroPython --pattern 'micropython-aka-sim-windows-x64-*.zip' -D "$tmp/mp"
+          gh release download --repo Jicehel-Aka/akalove       --pattern 'aka-love-sim-windows-x64-*.zip'       -D "$tmp/love"
+          Get-ChildItem "$tmp/mp/*.zip"   -ErrorAction SilentlyContinue | ForEach-Object { Expand-Archive $_.FullName -DestinationPath "$tmp/mpx"   -Force }
+          Get-ChildItem "$tmp/love/*.zip" -ErrorAction SilentlyContinue | ForEach-Object { Expand-Archive $_.FullName -DestinationPath "$tmp/lovex" -Force }
+          Copy-Item "$tmp/mpx/aka-py-sim.exe"     $sims -ErrorAction SilentlyContinue
+          Copy-Item "$tmp/lovex/akalove-play.exe" $sims -ErrorAction SilentlyContinue
+          Copy-Item "$tmp/mpx/SDL2.dll"           $sims -ErrorAction SilentlyContinue
+          Copy-Item "$tmp/lovex/SDL2.dll"         $sims -ErrorAction SilentlyContinue
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Jicehel-Aka/akalove/main/tools/akatransfer.py" -OutFile "$sims/akatransfer.py" -ErrorAction SilentlyContinue
+          Get-ChildItem $sims
+
+      # Spécifique Linux : permissions exécutables + archive tar.gz
+      - name: Package Linux Archive (tar.gz)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          chmod +x artifacts/${{ matrix.runtime }}/GamebuinoAKA.App
+          mkdir -p dist
+          tar -czvf dist/GamebuinoAKA-IDE-linux-x64.tar.gz -C artifacts/${{ matrix.runtime }} .
+
+      # Spécifique Windows : archive zip
+      - name: Package Windows Archive (zip)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Compress-Archive -Path "artifacts/${{ matrix.runtime }}/*" -DestinationPath "dist/GamebuinoAKA-IDE-windows-x64.zip" -Force
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: 🚀 Publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == true)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded-artifacts
+
+      - name: Collect archives and generate SHA256 checksums
+        run: |
+          mkdir -p release-assets
+          find downloaded-artifacts -type f ( -name "*.tar.gz" -o -name "*.zip" ) -exec cp {} release-assets/ ;
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+          ls -la
+
+      - name: Determine tag name
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.tag_name }}" ]; then
+            TAG="${{ inputs.tag_name }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="v1.0.0-build-$(date +'%Y%m%d%H%M')"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: "Gamebuino AKA IDE ${{ steps.vars.outputs.tag }}"
+          body: |
+            ### 🎮 Gamebuino AKA IDE — Release ${{ steps.vars.outputs.tag }}
+
+            Binaires autonomes multiplateformes pour l'IDE Gamebuino AKA (console ESP32-S3, écran couleur 320×240).
+
+            #### 📦 Téléchargements disponibles
+            - 🐧 **Linux (x64)** : `GamebuinoAKA-IDE-linux-x64.tar.gz`
+            - 🪟 **Windows (x64)** : `GamebuinoAKA-IDE-windows-x64.zip`
+            - 🔒 **Empreintes de sécurité** : `SHA256SUMS.txt`
+
+            #### 🐧 Utilisation rapide sous Linux
+            ```bash
+            tar -xzf GamebuinoAKA-IDE-linux-x64.tar.gz
+            ./GamebuinoAKA.App
+            ```
+            *Pour flasher l'ESP32-S3 sans accès root, copiez `packaging/linux/99-gamebuino.rules` dans `/etc/udev/rules.d/` et rechargez udev.*
+          draft: false
+          prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
+          generate_release_notes: true
+          files: release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

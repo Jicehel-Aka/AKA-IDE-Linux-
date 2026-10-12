@@ -5,11 +5,6 @@ using Newtonsoft.Json;
 
 namespace GamebuinoAKA.Core.Services
 {
-    /// <summary>
-    /// Chargement/sauvegarde des paramètres, portable. Le dossier de config vient
-    /// d'IPlatformPaths (XDG sous Linux, %APPDATA% sous Windows). Un fichier absent
-    /// ou illisible retombe proprement sur les valeurs par défaut.
-    /// </summary>
     public sealed class SettingsService : ISettingsService
     {
         private const string FileName = "settings.json";
@@ -17,7 +12,6 @@ namespace GamebuinoAKA.Core.Services
         private AppSettings _settings = new AppSettings();
 
         public AppSettings Settings => _settings;
-
         public string SettingsFilePath => Path.Combine(_paths.ConfigDirectory, FileName);
 
         public SettingsService(IPlatformPaths paths)
@@ -34,11 +28,7 @@ namespace GamebuinoAKA.Core.Services
                     ? JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText(SettingsFilePath)) ?? new AppSettings()
                     : new AppSettings();
             }
-            catch
-            {
-                // JSON corrompu / illisible → valeurs par défaut (jamais d'exception ici).
-                _settings = new AppSettings();
-            }
+            catch { _settings = new AppSettings(); }
 
             if (string.IsNullOrEmpty(_settings.WorkspaceFolder))
                 _settings.WorkspaceFolder = _paths.DefaultWorkspaceDirectory;

@@ -8,11 +8,6 @@ using Avalonia.Media.Imaging;
 
 namespace GamebuinoAKA.App.Controls
 {
-    /// <summary>
-    /// Affiche un bitmap découpé en cellules (au zoom entier). Un clic/glisser sur
-    /// une cellule invoque CellCommand avec un Point(colonne, ligne). SelectedCell
-    /// (col,row) dessine un cadre de surbrillance (-1,-1 = aucune).
-    /// </summary>
     public class GridCanvas : Control
     {
         public static readonly StyledProperty<Bitmap?> SourceProperty =
@@ -40,15 +35,11 @@ namespace GamebuinoAKA.App.Controls
 
         static GridCanvas()
         {
-            AffectsRender<GridCanvas>(SourceProperty, ZoomProperty, ShowGridProperty, SelectedCellProperty,
-                                      CellWidthProperty, CellHeightProperty);
+            AffectsRender<GridCanvas>(SourceProperty, ZoomProperty, ShowGridProperty, SelectedCellProperty, CellWidthProperty, CellHeightProperty);
             AffectsMeasure<GridCanvas>(SourceProperty, ZoomProperty);
         }
 
-        public GridCanvas()
-        {
-            RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.None);
-        }
+        public GridCanvas() => RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.None);
 
         private bool _pressing;
 

@@ -8,38 +8,20 @@ using Newtonsoft.Json;
 
 namespace GamebuinoAKA.Core.Services
 {
-    /// <summary>
-    /// Gère la banque sonore globale de l'IDE :
-    ///  - scan d'un projet pour en extraire sons et musiques ;
-    ///  - persistence JSON dans le workspace ;
-    ///  - (la lecture de prévisualisation est déléguée à l.UI via IApplicationLauncher) ;
-    ///  - CRUD sur les assets (ajout, suppression, modification, copie dans projet).
-    /// </summary>
     public class SoundBankService : ISoundBankService
     {
-        // Extensions audio reconnues
         private static readonly string[] WavExtensions = { ".wav" };
         private static readonly string[] MusicExtensions = { ".pmf" };
-
-        // Fichiers .h pouvant contenir des données audio embarquées
         private static readonly string[] HeaderExtensions = { ".h" };
         private static readonly string[] FxHeaderKeywords = { "WAV_SYSTEM", "fx_system", "gb_audio_track_fx", "SOUND_FX" };
         private static readonly string[] MusicHeaderKeywords = { "pmf_data", "PMF_DATA", "gb_audio_track_pmf", "MUSIC_DATA" };
 
         private const string BankFileName = ".aka-soundbank.json";
-
         private readonly ISettingsService _settings;
 
-        public SoundBankService(ISettingsService settings)
-        {
-            _settings = settings;
-        }
+        public SoundBankService(ISettingsService settings) => _settings = settings;
 
-        // ── Banque : chargement / sauvegarde ──────────────────────────────────────
-
-        /// <summary>Chemin du fichier de banque dans le workspace courant.</summary>
-        public string BankFilePath =>
-            Path.Combine(_settings.Settings.WorkspaceFolder ?? string.Empty, BankFileName);
+        public string BankFilePath => Path.Combine(_settings.Settings.WorkspaceFolder ?? string.Empty, BankFileName);
 
         public SoundBank LoadBank()
         {
@@ -51,26 +33,16 @@ namespace GamebuinoAKA.Core.Services
                     return JsonConvert.DeserializeObject<SoundBank>(json) ?? new SoundBank();
                 }
             }
-            catch { /* fichier corrompu → nouvelle banque */ }
+            catch { }
             return new SoundBank();
         }
 
         public void SaveBank(SoundBank bank)
         {
-            try
-            {
-                File.WriteAllText(BankFilePath,
-                    JsonConvert.SerializeObject(bank, Formatting.Indented));
-            }
-            catch { /* best-effort */ }
+            try { File.WriteAllText(BankFilePath, JsonConvert.SerializeObject(bank, Formatting.Indented)); }
+            catch { }
         }
 
-        // ── Scan de projet ────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// Scanne récursivement le dossier du projet et retourne les assets audio
-        /// trouvés (sans doublons de chemin avec la banque existante).
-        /// </summary>
         public Task<List<SoundAsset>> ScanProjectAsync(GamebuinoProject project, SoundBank existingBank)
         {
             return Task.Run(() =>
@@ -78,23 +50,16 @@ namespace GamebuinoAKA.Core.Services
                 var found = new List<SoundAsset>();
                 if (!Directory.Exists(project.FolderPath)) return found;
 
-                // Ensemble des chemins déjà connus
-                var knownPaths = new HashSet<string>(
-                    existingBank.Assets.Select(a => a.FilePath),
-                    StringComparer.OrdinalIgnoreCase);
-
+                var knownPaths = new HashSet<string>(existingBank.Assets.Select(a => a.FilePath), StringComparer.OrdinalIgnoreCase);
                 ScanDirectory(project.FolderPath, project.Name, knownPaths, found);
                 return found;
             });
         }
 
-        private static void ScanDirectory(string dir, string projectName,
-            HashSet<string> knownPaths, List<SoundAsset> result)
+        private static void ScanDirectory(string dir, string projectName, HashSet<string> knownPaths, List<SoundAsset> result)
         {
-            // Skip dossiers de build
             var dirName = Path.GetFileName(dir);
-            if (dirName is ".pio" or "build" or ".git" or "__pycache__" or "node_modules")
-                return;
+            if (dirName is ".pio" or "build" or ".git" or "__pycache__" or "node_modules") return;
 
             foreach (var file in Directory.EnumerateFiles(dir))
             {
@@ -102,16 +67,11 @@ namespace GamebuinoAKA.Core.Services
                 if (knownPaths.Contains(file)) continue;
 
                 SoundAsset? asset = null;
+                if (WavExtensions.Contains(ext)) asset = CreateFromWav(file, projectName);
+                else if (MusicExtensions.Contains(ext)) asset = CreateFromPmf(file, projectName);
+                else if (HeaderExtensions.Contains(ext)) asset = TryCreateFromHeader(file, projectName);
 
-                if (WavExtensions.Contains(ext))
-                    asset = CreateFromWav(file, projectName);
-                else if (MusicExtensions.Contains(ext))
-                    asset = CreateFromPmf(file, projectName);
-                else if (HeaderExtensions.Contains(ext))
-                    asset = TryCreateFromHeader(file, projectName);
-
-                if (asset != null)
-                    result.Add(asset);
+                if (asset != null) result.Add(asset);
             }
 
             foreach (var sub in Directory.EnumerateDirectories(dir))
@@ -146,7 +106,7 @@ namespace GamebuinoAKA.Core.Services
                 Name = Path.GetFileNameWithoutExtension(path),
                 FilePath = path,
                 FileExtension = ".pmf",
-                PreviewWavPath = string.Empty, // pas de preview directe PMF sans conversion
+                PreviewWavPath = string.Empty,
                 AssetType = SoundAssetType.Music,
                 Theme = GuessTheme(path),
                 SourceProject = projectName,
@@ -179,51 +139,34 @@ namespace GamebuinoAKA.Core.Services
             catch { return null; }
         }
 
-        // ── Thème heuristique ──────────────────────────────────────────────────────
-
         private static string GuessTheme(string path)
         {
             var name = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
             var dir = Path.GetDirectoryName(path) ?? string.Empty;
 
-            if (name.Contains("music") || name.Contains("track") || name.Contains("theme")
-                || dir.Contains("music", StringComparison.OrdinalIgnoreCase))
+            if (name.Contains("music") || name.Contains("track") || name.Contains("theme") || dir.Contains("music", StringComparison.OrdinalIgnoreCase))
                 return "Musique";
-            if (name.Contains("ui") || name.Contains("menu") || name.Contains("click")
-                || name.Contains("button"))
+            if (name.Contains("ui") || name.Contains("menu") || name.Contains("click") || name.Contains("button"))
                 return "Interface";
             if (name.Contains("explode") || name.Contains("explo") || name.Contains("boom"))
                 return "Explosions";
             if (name.Contains("laser") || name.Contains("shoot") || name.Contains("bullet"))
                 return "Armes";
-            if (name.Contains("jump") || name.Contains("land") || name.Contains("walk")
-                || name.Contains("step"))
+            if (name.Contains("jump") || name.Contains("land") || name.Contains("walk") || name.Contains("step"))
                 return "Personnage";
-            if (name.Contains("collect") || name.Contains("coin") || name.Contains("item")
-                || name.Contains("pickup"))
+            if (name.Contains("collect") || name.Contains("coin") || name.Contains("item") || name.Contains("pickup"))
                 return "Collectibles";
-            if (name.Contains("ambiance") || name.Contains("ambient") || name.Contains("wind")
-                || name.Contains("rain"))
+            if (name.Contains("ambiance") || name.Contains("ambient") || name.Contains("wind") || name.Contains("rain"))
                 return "Ambiance";
-            if (dir.Contains("assets", StringComparison.OrdinalIgnoreCase))
-                return "Assets";
-
             return "Divers";
         }
 
-
-        // ── Manipulation de la banque ──────────────────────────────────────────────
-
-        /// <summary>Ajoute un fichier audio externe à la banque.</summary>
         public SoundAsset ImportFile(string filePath, SoundBank bank)
         {
             var ext = Path.GetExtension(filePath).ToLowerInvariant();
             SoundAsset asset;
-
-            if (WavExtensions.Contains(ext))
-                asset = CreateFromWav(filePath, string.Empty);
-            else if (MusicExtensions.Contains(ext))
-                asset = CreateFromPmf(filePath, string.Empty);
+            if (WavExtensions.Contains(ext)) asset = CreateFromWav(filePath, string.Empty);
+            else if (MusicExtensions.Contains(ext)) asset = CreateFromPmf(filePath, string.Empty);
             else
             {
                 asset = new SoundAsset
@@ -241,66 +184,46 @@ namespace GamebuinoAKA.Core.Services
             return asset;
         }
 
-        /// <summary>Supprime un asset de la banque (le fichier source n'est pas supprimé).</summary>
         public void RemoveAsset(SoundAsset asset, SoundBank bank)
         {
             bank.Assets.RemoveAll(a => a.Id == asset.Id);
             SaveBank(bank);
         }
 
-        /// <summary>Met à jour un asset existant et persiste la banque.</summary>
         public void UpdateAsset(SoundAsset updated, SoundBank bank)
         {
             var idx = bank.Assets.FindIndex(a => a.Id == updated.Id);
-            if (idx >= 0)
-                bank.Assets[idx] = updated;
+            if (idx >= 0) bank.Assets[idx] = updated;
             SaveBank(bank);
         }
 
-        /// <summary>
-        /// Copie le fichier source dans le dossier assets du projet cible
-        /// et retourne le chemin de destination.
-        /// </summary>
         public string AddToProject(SoundAsset asset, GamebuinoProject project)
         {
             string assetsDir = Path.Combine(project.IsPlatformIO ? project.SrcPath : project.MainPath, "assets");
             Directory.CreateDirectory(assetsDir);
-
             string dest = Path.Combine(assetsDir, Path.GetFileName(asset.FilePath));
-            if (!File.Exists(dest))
-                File.Copy(asset.FilePath, dest);
+            if (!File.Exists(dest)) File.Copy(asset.FilePath, dest);
             return dest;
         }
 
-        // ── Utilitaires ───────────────────────────────────────────────────────────
-
-        /// <summary>Retourne la durée d'un fichier WAV en lisant l'en-tête RIFF.</summary>
         private static double GetWavDuration(string path)
         {
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var br = new BinaryReader(fs);
-            // RIFF header
-            br.ReadBytes(4);  // "RIFF"
-            br.ReadInt32();   // chunk size
-            br.ReadBytes(4);  // "WAVE"
-            // fmt chunk
-            br.ReadBytes(4);  // "fmt "
+            br.ReadBytes(4); br.ReadInt32(); br.ReadBytes(4);
+            br.ReadBytes(4);
             int fmtSize = br.ReadInt32();
-            br.ReadInt16();   // audio format
+            br.ReadInt16();
             short channels = br.ReadInt16();
             int sampleRate = br.ReadInt32();
-            br.ReadInt32();   // byte rate
-            br.ReadInt16();   // block align
+            br.ReadInt32(); br.ReadInt16();
             short bitsPerSample = br.ReadInt16();
             if (fmtSize > 16) br.ReadBytes(fmtSize - 16);
-            // data chunk
-            br.ReadBytes(4);  // "data"
+            br.ReadBytes(4);
             int dataSize = br.ReadInt32();
-
             if (sampleRate <= 0 || channels <= 0 || bitsPerSample <= 0) return 0;
             double bytesPerSample = bitsPerSample / 8.0;
-            double totalSamples = dataSize / (bytesPerSample * channels);
-            return totalSamples / sampleRate;
+            return (dataSize / (bytesPerSample * channels)) / sampleRate;
         }
     }
 }

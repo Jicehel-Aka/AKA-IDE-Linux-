@@ -1,11 +1,25 @@
+using System;
 using System.IO;
 using System.Linq;
 using GamebuinoAKA.Core.Models;
+using GamebuinoAKA.Core.Platform;
 using GamebuinoAKA.Core.Services;
 using Xunit;
 
 namespace GamebuinoAKA.Core.Tests
 {
+    internal class TempPlatformPaths : IPlatformPaths
+    {
+        public string Root { get; } = Path.Combine(Path.GetTempPath(), "GamebuinoTests_" + Guid.NewGuid().ToString("N"));
+        // Le dossier GUID n'existe pas tant qu'on ne le crée pas : on le fait dès la
+        // construction pour que toute suite puisse écrire directement dans Root.
+        public TempPlatformPaths() => Directory.CreateDirectory(Root);
+        public string ConfigDirectory => Path.Combine(Root, "config");
+        public string DataDirectory => Path.Combine(Root, "data");
+        public string CacheDirectory => Path.Combine(Root, "cache");
+        public string DefaultWorkspaceDirectory => Path.Combine(Root, "ws");
+    }
+
     public class CodeSnippetServiceTests
     {
         private static (CodeSnippetService svc, SettingsService settings) Make()
@@ -26,7 +40,6 @@ namespace GamebuinoAKA.Core.Tests
             Assert.All(list, s => Assert.True(s.ForPlatformIO));
         }
 
-        // Robuste : le filtrage est correct même si le catalogue était vide côté ESP-IDF.
         [Fact]
         public void GetAll_EspIdf_ReturnsOnlyEspIdfSnippets()
         {
@@ -34,7 +47,6 @@ namespace GamebuinoAKA.Core.Tests
             Assert.All(svc.GetAll(BuildSystem.EspIdf), s => Assert.True(s.ForEspIdf));
         }
 
-        // Réel : le catalogue contient bien des procédures ESP-IDF.
         [Fact]
         public void GetAll_EspIdf_ContainsBuiltinProcedures()
         {
@@ -55,7 +67,6 @@ namespace GamebuinoAKA.Core.Tests
             Assert.Contains("fillRect", files.First(kv => kv.Key.Contains("app_main")).Value);
         }
 
-        // Robuste : teste le moteur d'injection avec un snippet synthétique.
         [Fact]
         public void GenerateFiles_InjectsSnippetMarkerContent()
         {
