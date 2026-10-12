@@ -75,5 +75,24 @@ namespace GamebuinoAKA.Core.Tests
             Assert.False(File.Exists(Path.Combine(main, "audio.cpp")));
             Assert.DoesNotContain("audio.cpp", File.ReadAllText(Path.Combine(main, "CMakeLists.txt")));
         }
+
+        [Fact]
+        public async Task Create_MicroPython_WritesMainAndFramework()
+        {
+            var paths = new TempPlatformPaths();
+            var dest = Dest(paths);
+            await new TemplateService(new SettingsService(paths))
+                .CreateMicroPythonProjectAsync("MonPy", dest);
+
+            var dir = Path.Combine(dest, "MonPy");
+            Assert.True(File.Exists(Path.Combine(dir, "main.py")));
+            Assert.True(File.Exists(Path.Combine(dir, "README.md")));
+            Assert.Contains("import game8266", File.ReadAllText(Path.Combine(dir, "main.py")));
+            // Le cadre est embarqué (Content du projet Core copié dans la sortie des tests).
+            Assert.True(File.Exists(Path.Combine(dir, "game8266.py")));
+            Assert.True(File.Exists(Path.Combine(dir, "upygame.py")));
+            // Un dossier avec un .py doit être détecté comme projet MicroPython.
+            Assert.False(File.Exists(Path.Combine(dir, "platformio.ini")));
+        }
     }
 }
