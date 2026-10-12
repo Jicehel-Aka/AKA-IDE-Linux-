@@ -172,7 +172,7 @@ jobs:
       - name: Collect archives and generate SHA256 checksums
         run: |
           mkdir -p release-assets
-          find downloaded-artifacts -type f ( -name "*.tar.gz" -o -name "*.zip" ) -exec cp {} release-assets/ ;
+          find downloaded-artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release-assets/ \;
           cd release-assets
           sha256sum * > SHA256SUMS.txt
           ls -la
