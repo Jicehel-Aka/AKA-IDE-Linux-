@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GamebuinoAKA.App.Views.ConsoleView"
+             x:CompileBindings="False">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="12">
+
+        <!-- Barre de connexion -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Moniteur série" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+            <Border Width="1" Background="#333" Margin="4,0"/>
+            <TextBlock Text="Port" VerticalAlignment="Center"/>
+            <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding SelectedPort}"
+                      MinWidth="160" IsEnabled="{Binding !IsConnected}"/>
+            <Button Content="🔄" ToolTip.Tip="Actualiser la liste des ports"
+                    Command="{Binding RefreshPortsCommand}" IsEnabled="{Binding !IsConnected}"/>
+            <TextBlock Text="Bauds" VerticalAlignment="Center"/>
+            <ComboBox ItemsSource="{Binding BaudRates}" SelectedItem="{Binding SelectedBaud}"
+                      MinWidth="110" IsEnabled="{Binding !IsConnected}"/>
+            <Button Content="🔌 Connecter" Command="{Binding ConnectCommand}"
+                    IsEnabled="{Binding !IsConnected}"/>
+            <Button Content="⛔ Déconnecter" Command="{Binding DisconnectCommand}"
+                    IsEnabled="{Binding IsConnected}"/>
+            <Border Width="1" Background="#333" Margin="4,0"/>
+            <Button Content="🗑 Effacer" Command="{Binding ClearCommand}"/>
+            <CheckBox Content="Défilement auto" IsChecked="{Binding AutoScroll}" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <TextBlock Grid.Row="1" Text="{Binding Status}" Foreground="#9CDCFE" Margin="0,0,0,6"/>
+
+        <!-- Journal de la console -->
+        <Border Grid.Row="2" BorderBrush="#333" BorderThickness="1" CornerRadius="4" Background="#111">
+            <ScrollViewer Name="LogScroller">
+                <TextBox Name="LogBox" Text="{Binding Log}" IsReadOnly="True"
+                         AcceptsReturn="True" TextWrapping="NoWrap"
+                         FontFamily="Cascadia Mono,Consolas,Menlo,monospace" FontSize="12"
+                         Background="Transparent" BorderThickness="0" Padding="8"/>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Envoi vers la carte -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+            <TextBox Name="InputBox" Text="{Binding Input}" Watermark="Commande à envoyer à l'AKA (Entrée)…"
+                     Width="520" IsEnabled="{Binding IsConnected}"/>
+            <Button Content="Envoyer" Command="{Binding SendCommand}" IsEnabled="{Binding IsConnected}"/>
+            <Button Content="Ctrl-C" ToolTip.Tip="Interrompre le programme en cours (REPL)"
+                    Command="{Binding SendCtrlCCommand}" IsEnabled="{Binding IsConnected}"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

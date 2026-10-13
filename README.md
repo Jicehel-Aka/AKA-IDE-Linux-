@@ -16,6 +16,8 @@ IDE complet (.NET 10 + Avalonia UI) pour créer, programmer et flasher des jeux 
 - 🗺️ **Éditeur de tilemaps** : Palette de tuiles découpées, calques fond/premier plan, peinture directe, export C++ et projets `.gbmap`.
 - 🔊 **Banque de sons** : Détection et écoute de sons (.wav, .pmf, en-têtes C++), organisation par thèmes.
 - 🧩 **Bibliothèque de snippets (53 procédures)** : Catalogue complet pour **PlatformIO (32)** et **ESP-IDF (21)**, injectables directement dans le code du jeu (formes, textes, entrées, gravité, vélocité, rebond, scores, timers, etc.).
+- 🐍 **Éditeur de scripts + simulateur PC** : Édition `.py` (MicroPython) et `.lua` (Love2D), **test sur le simulateur PC embarqué** (fenêtré, mêmes écran/boutons/son que l'AKA) avec la **sortie console affichée en direct dans l'IDE**, et envoi du script vers la carte réelle par le port série.
+- 🖥️ **Console / Moniteur série** : Lit sur le PC la **sortie console de l'AKA réelle** (REPL MicroPython, `print()`, logs natifs) via USB-série (sélection du port + débit, multiplateforme Linux `/dev/tty*` et Windows `COMx`), et permet de renvoyer des commandes (Entrée, `Ctrl-C`) vers la carte.
 - 🐧 **Intégration Linux native** : Respect des répertoires standards XDG (`~/.config/GamebuinoAKA`, `~/.local/share/GamebuinoAKA`), règles udev USB pour le flash sans `sudo`, et fichier `.desktop`.
 
 ---

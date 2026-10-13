@@ -16,6 +16,7 @@ namespace GamebuinoAKA.App.ViewModels
         public SoundBankViewModel SoundBank { get; }
         public SnippetsViewModel Snippets { get; }
         public ScriptEditorViewModel ScriptEditor { get; }
+        public ConsoleViewModel Console { get; }
 
         [ObservableProperty] private object? _currentPage;
 
@@ -25,7 +26,8 @@ namespace GamebuinoAKA.App.ViewModels
             IApplicationLauncher launcher, IPlatformIOService pio, IEspIdfService idf,
             AssetService asset, ISoundBankService soundBank, ICodeSnippetService snippets,
             IEmulatorService emulator, IScriptRuntimeService scriptRuntime,
-            IFileDialogService files, IDialogService dialogs)
+            IFileDialogService files, IDialogService dialogs,
+            ISerialMonitorService serial)
         {
             Home = new HomeViewModel(this);
             Projects = new ProjectsViewModel(projects, build, git, vscode, launcher, emulator, settings, this, dialogs);
@@ -36,6 +38,7 @@ namespace GamebuinoAKA.App.ViewModels
             SoundBank = new SoundBankViewModel(soundBank, projects, launcher, files);
             Snippets = new SnippetsViewModel(snippets);
             ScriptEditor = new ScriptEditorViewModel(scriptRuntime, settings, files);
+            Console = new ConsoleViewModel(serial, settings);
 
             NavigateToProjects();
         }
@@ -49,5 +52,6 @@ namespace GamebuinoAKA.App.ViewModels
         [RelayCommand] public void NavigateToSoundBank() => CurrentPage = SoundBank;
         [RelayCommand] public void NavigateToSnippets() => CurrentPage = Snippets;
         [RelayCommand] public void NavigateToScriptEditor() => CurrentPage = ScriptEditor;
+        [RelayCommand] public void NavigateToConsole() => CurrentPage = Console;
     }
 }
