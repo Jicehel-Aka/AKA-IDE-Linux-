@@ -5,7 +5,7 @@ de l'écran Scripts) :
 
 ```
 sims/akalove-play[.exe]   # simulateur Love2D  (dépôt akalove)
-sims/aka-py-sim[.exe]     # simulateur MicroPython (dépôt MycroPython)
+sims/aka-py-play[.exe]     # simulateur MicroPython (dépôt MycroPython)
 sims/SDL2.dll             # (Windows) requise par les deux simulateurs
 sims/akatransfer.py       # transfert série vers la console réelle
 ```
@@ -14,7 +14,7 @@ sims/akatransfer.py       # transfert série vers la console réelle
 
 À la **release**, la CI (`.github/workflows/ci.yml`, étapes « Bundle PC
 simulators ») récupère automatiquement les binaires depuis les dernières
-releases des dépôts **MycroPython** (`aka-py-sim`) et **akalove**
+releases des dépôts **MycroPython** (`aka-py-play`) et **akalove**
 (`akalove-play`), plus `akatransfer.py`, et les place ici dans le paquet publié.
 Rien à faire à la main pour une release.
 
@@ -28,12 +28,12 @@ On récupère les binaires ainsi (exemple Linux) :
 ```bash
 gh release download --repo Jicehel-Aka/MycroPython --pattern 'micropython-aka-sim-linux-x64-*.zip'
 gh release download --repo Jicehel-Aka/akalove       --pattern 'aka-love-sim-linux-x64-*.zip'
-# puis copier aka-py-sim et akalove-play dans ce dossier.
+# puis copier aka-py-play et akalove-play dans ce dossier.
 ```
 
 ## Contrat de ligne de commande
 
 ```
 akalove-play  "<dossier_du_jeu>"    # dossier contenant main.lua/conf.lua
-aka-py-sim    "<script.py>"         # script d'entrée (ex: main.py)
+aka-py-play    "<script.py>"         # script d'entrée (ex: main.py)
 ```
