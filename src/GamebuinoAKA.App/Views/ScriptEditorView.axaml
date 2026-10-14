@@ -24,9 +24,29 @@
                            VerticalScrollBarVisibility="Auto"/>
         </Border>
 
-        <Grid Grid.Row="2" RowDefinitions="Auto,Auto" Margin="0,8,0,0">
+        <Grid Grid.Row="2" RowDefinitions="Auto,Auto,Auto" Margin="0,8,0,0">
             <TextBlock Grid.Row="0" Text="{Binding Status}" Foreground="#AAA"/>
-            <Border Grid.Row="1" BorderBrush="#333" BorderThickness="1" CornerRadius="4" Height="120" Margin="0,6,0,0">
+
+            <!-- Erreurs cliquables : saut à la ligne fautive -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" Margin="0,4,0,0"
+                        IsVisible="{Binding HasErrors}">
+                <TextBlock Text="⚠ Erreurs :" Foreground="#E06C75" VerticalAlignment="Center"/>
+                <ItemsControl ItemsSource="{Binding Errors}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Margin="2" Padding="6,2"
+                                    Content="{Binding Raw}"
+                                    Command="{Binding $parent[UserControl].DataContext.GoToErrorCommand}"
+                                    CommandParameter="{Binding}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <Border Grid.Row="2" BorderBrush="#333" BorderThickness="1" CornerRadius="4" Height="120" Margin="0,6,0,0">
                 <ScrollViewer>
                     <TextBox Text="{Binding OutputLog}" IsReadOnly="True" AcceptsReturn="True"
                              Background="Transparent" BorderThickness="0" FontFamily="monospace" FontSize="12"/>

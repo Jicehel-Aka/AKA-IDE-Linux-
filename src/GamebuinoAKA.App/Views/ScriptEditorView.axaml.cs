@@ -59,6 +59,7 @@ namespace GamebuinoAKA.App.Views
             if (e.PropertyName == nameof(ScriptEditorViewModel.ScriptText)) SetEditorText(_vm.ScriptText);
             else if (e.PropertyName == nameof(ScriptEditorViewModel.Highlighting)) ApplyHighlighting(_vm.Highlighting);
             else if (e.PropertyName == nameof(ScriptEditorViewModel.ApiSymbols)) RebuildLookup();
+            else if (e.PropertyName == nameof(ScriptEditorViewModel.GotoLine)) ScrollToLine(_vm.GotoLine);
         }
 
         // ── Autocomplétion ───────────────────────────────────────────────────────
@@ -154,6 +155,23 @@ namespace GamebuinoAKA.App.Views
             if (end <= start) return null;
             var w = text.Substring(start, end - start).Trim('.');
             return w.Length == 0 ? null : w;
+        }
+
+        private void ScrollToLine(int? line)
+        {
+            if (_editor is null || line is null) return;
+            try
+            {
+                int n = line.Value;
+                if (n < 1) return;
+                if (n > _editor.Document.LineCount) n = _editor.Document.LineCount;
+                var docLine = _editor.Document.GetLineByNumber(n);
+                _editor.CaretOffset = docLine.Offset;
+                _editor.ScrollToLine(n);
+                _editor.TextArea.Caret.BringCaretToView();
+                _editor.Focus();
+            }
+            catch { /* navigation best-effort */ }
         }
 
         // ── Éditeur ↔ VM ───────────────────────────────────────────────────────

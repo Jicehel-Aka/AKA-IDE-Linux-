@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GamebuinoAKA.Core.Models;
 using GamebuinoAKA.Core.Services;
 
 namespace GamebuinoAKA.App.ViewModels
@@ -18,9 +19,15 @@ namespace GamebuinoAKA.App.ViewModels
     {
         private readonly ISerialMonitorService _serial;
         private readonly ISettingsService _settings;
+        private readonly INavigationService _nav;
+        private string _lineBuf = "";
 
         public ObservableCollection<string> Ports { get; } = new();
         public int[] BaudRates { get; } = { 9600, 74880, 115200, 230400, 460800, 921600 };
+
+        /// <summary>Emplacements d'erreur détectés dans le flux série (cliquables).</summary>
+        public ObservableCollection<ErrorLocation> Errors { get; } = new();
+        public bool HasErrors => Errors.Count > 0;
 
         [ObservableProperty] private string? _selectedPort;
         [ObservableProperty] private int _selectedBaud = 115200;
@@ -30,9 +37,10 @@ namespace GamebuinoAKA.App.ViewModels
         [ObservableProperty] private bool _autoScroll = true;
         [ObservableProperty] private string _status = "Sélectionnez le port de l'AKA puis Connecter.";
 
-        public ConsoleViewModel(ISerialMonitorService serial, ISettingsService settings)
+        public ConsoleViewModel(ISerialMonitorService serial, ISettingsService settings, INavigationService nav)
         {
-            _serial = serial; _settings = settings;
+            _serial = serial; _settings = settings; _nav = nav;
+            Errors.CollectionChanged += (_, __) => OnPropertyChanged(nameof(HasErrors));
             _serial.DataReceived += OnData;
             _serial.StatusChanged += OnStatus;
             RefreshPorts();
@@ -102,12 +110,31 @@ namespace GamebuinoAKA.App.ViewModels
         }
 
         [RelayCommand]
-        private void Clear() => Log = "";
+        private void Clear() { Log = ""; _lineBuf = ""; Errors.Clear(); }
+
+        [RelayCommand]
+        private void GoToError(ErrorLocation? loc)
+        {
+            if (loc != null) _nav.OpenScriptAt(loc.File, loc.Line);
+        }
 
         private void OnData(string text) => Append(text);
         private void OnStatus(string line) => Dispatcher.UIThread.Post(() => { Status = line; Log += line + "\n"; });
 
-        private void Append(string text) => Dispatcher.UIThread.Post(() => Log += text);
+        private void Append(string text) => Dispatcher.UIThread.Post(() =>
+        {
+            Log += text;
+            // Analyse ligne par ligne (le flux série arrive par fragments arbitraires).
+            _lineBuf += text;
+            int nl;
+            while ((nl = _lineBuf.IndexOf('\n')) >= 0)
+            {
+                var lineStr = _lineBuf.Substring(0, nl);
+                _lineBuf = _lineBuf.Substring(nl + 1);
+                var loc = TracebackParser.ParseLine(lineStr);
+                if (loc != null) Errors.Add(loc);
+            }
+        });
 
         public void Dispose()
         {

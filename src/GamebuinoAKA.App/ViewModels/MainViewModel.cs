@@ -38,7 +38,7 @@ namespace GamebuinoAKA.App.ViewModels
             SoundBank = new SoundBankViewModel(soundBank, projects, launcher, files);
             Snippets = new SnippetsViewModel(snippets);
             ScriptEditor = new ScriptEditorViewModel(scriptRuntime, settings, files, apiCatalog);
-            Console = new ConsoleViewModel(serial, settings);
+            Console = new ConsoleViewModel(serial, settings, this);
 
             NavigateToProjects();
         }
@@ -53,5 +53,11 @@ namespace GamebuinoAKA.App.ViewModels
         [RelayCommand] public void NavigateToSnippets() => CurrentPage = Snippets;
         [RelayCommand] public void NavigateToScriptEditor() => CurrentPage = ScriptEditor;
         [RelayCommand] public void NavigateToConsole() => CurrentPage = Console;
+
+        public void OpenScriptAt(string file, int line)
+        {
+            ScriptEditor.OpenFileAt(file, line);
+            CurrentPage = ScriptEditor;
+        }
     }
 }
