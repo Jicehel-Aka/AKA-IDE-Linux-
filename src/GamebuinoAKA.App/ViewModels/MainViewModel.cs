@@ -27,7 +27,7 @@ namespace GamebuinoAKA.App.ViewModels
             AssetService asset, ISoundBankService soundBank, ICodeSnippetService snippets,
             IEmulatorService emulator, IScriptRuntimeService scriptRuntime,
             IFileDialogService files, IDialogService dialogs,
-            ISerialMonitorService serial)
+            ISerialMonitorService serial, IApiCatalogService apiCatalog)
         {
             Home = new HomeViewModel(this);
             Projects = new ProjectsViewModel(projects, build, git, vscode, launcher, emulator, settings, this, dialogs);
@@ -37,7 +37,7 @@ namespace GamebuinoAKA.App.ViewModels
             TilemapEditor = new TilemapEditorViewModel(asset, files);
             SoundBank = new SoundBankViewModel(soundBank, projects, launcher, files);
             Snippets = new SnippetsViewModel(snippets);
-            ScriptEditor = new ScriptEditorViewModel(scriptRuntime, settings, files);
+            ScriptEditor = new ScriptEditorViewModel(scriptRuntime, settings, files, apiCatalog);
             Console = new ConsoleViewModel(serial, settings);
 
             NavigateToProjects();

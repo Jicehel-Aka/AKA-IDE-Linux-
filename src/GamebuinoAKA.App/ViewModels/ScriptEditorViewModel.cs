@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -18,6 +19,7 @@ namespace GamebuinoAKA.App.ViewModels
         private readonly IScriptRuntimeService _runtime;
         private readonly ISettingsService _settings;
         private readonly IFileDialogService _files;
+        private readonly IApiCatalogService _api;
 
         [ObservableProperty] private string _scriptText = "";
         [ObservableProperty] private string _currentFile = "";
@@ -33,6 +35,8 @@ namespace GamebuinoAKA.App.ViewModels
             _ => "—"
         };
         public bool HasFile => !string.IsNullOrEmpty(CurrentFile);
+        /// <summary>Symboles d'API du langage courant (autocomplétion + aide au survol).</summary>
+        public IReadOnlyList<ApiSymbol> ApiSymbols => _api.GetSymbols(Kind);
         /// <summary>Syntaxe AvaloniaEdit à appliquer ("Python" / "Lua" / null).</summary>
         public string? Highlighting => Kind == ProjectKind.Love2D ? "Lua"
             : Kind == ProjectKind.MicroPython ? "Python" : null;
@@ -41,12 +45,14 @@ namespace GamebuinoAKA.App.ViewModels
         {
             OnPropertyChanged(nameof(KindLabel));
             OnPropertyChanged(nameof(Highlighting));
+            OnPropertyChanged(nameof(ApiSymbols));
         }
         partial void OnCurrentFileChanged(string value) => OnPropertyChanged(nameof(HasFile));
 
-        public ScriptEditorViewModel(IScriptRuntimeService runtime, ISettingsService settings, IFileDialogService files)
+        public ScriptEditorViewModel(IScriptRuntimeService runtime, ISettingsService settings,
+            IFileDialogService files, IApiCatalogService api)
         {
-            _runtime = runtime; _settings = settings; _files = files;
+            _runtime = runtime; _settings = settings; _files = files; _api = api;
         }
 
         [RelayCommand]
