@@ -1,0 +1,266 @@
+[
+ {
+  "Name": "love.load",
+  "Signature": "function love.load()",
+  "Kind": "callback",
+  "Doc": "Appelée une fois au démarrage : initialise le jeu."
+ },
+ {
+  "Name": "love.update",
+  "Signature": "function love.update(dt)",
+  "Kind": "callback",
+  "Doc": "Appelée chaque frame. dt = secondes écoulées depuis la frame précédente."
+ },
+ {
+  "Name": "love.draw",
+  "Signature": "function love.draw()",
+  "Kind": "callback",
+  "Doc": "Appelée chaque frame pour dessiner."
+ },
+ {
+  "Name": "love.keypressed",
+  "Signature": "function love.keypressed(key)",
+  "Kind": "callback",
+  "Doc": "Appelée quand une touche est enfoncée."
+ },
+ {
+  "Name": "love.keyreleased",
+  "Signature": "function love.keyreleased(key)",
+  "Kind": "callback",
+  "Doc": "Appelée quand une touche est relâchée."
+ },
+ {
+  "Name": "love.quit",
+  "Signature": "function love.quit()",
+  "Kind": "callback",
+  "Doc": "Appelée avant la fermeture du jeu."
+ },
+ {
+  "Name": "love.graphics.circle",
+  "Signature": "love.graphics.circle(mode, x, y, radius)",
+  "Kind": "function",
+  "Doc": "Dessine un cercle. mode = \"fill\" ou \"line\"."
+ },
+ {
+  "Name": "love.graphics.rectangle",
+  "Signature": "love.graphics.rectangle(mode, x, y, w, h)",
+  "Kind": "function",
+  "Doc": "Dessine un rectangle. mode = \"fill\" ou \"line\"."
+ },
+ {
+  "Name": "love.graphics.print",
+  "Signature": "love.graphics.print(text, x, y)",
+  "Kind": "function",
+  "Doc": "Affiche du texte à (x, y)."
+ },
+ {
+  "Name": "love.graphics.printf",
+  "Signature": "love.graphics.printf(text, x, y, limit, align)",
+  "Kind": "function",
+  "Doc": "Affiche du texte avec retour à la ligne et alignement."
+ },
+ {
+  "Name": "love.graphics.draw",
+  "Signature": "love.graphics.draw(drawable, x, y, r, sx, sy)",
+  "Kind": "function",
+  "Doc": "Dessine une image/quad à (x, y), avec rotation/échelle optionnelles."
+ },
+ {
+  "Name": "love.graphics.setColor",
+  "Signature": "love.graphics.setColor(r, g, b, a)",
+  "Kind": "function",
+  "Doc": "Définit la couleur de dessin (composantes 0–1)."
+ },
+ {
+  "Name": "love.graphics.clear",
+  "Signature": "love.graphics.clear(r, g, b)",
+  "Kind": "function",
+  "Doc": "Efface l'écran avec une couleur."
+ },
+ {
+  "Name": "love.graphics.newImage",
+  "Signature": "love.graphics.newImage(path) -> Image",
+  "Kind": "function",
+  "Doc": "Charge une image depuis un fichier."
+ },
+ {
+  "Name": "love.graphics.newFont",
+  "Signature": "love.graphics.newFont(size) -> Font",
+  "Kind": "function",
+  "Doc": "Crée une police de la taille donnée."
+ },
+ {
+  "Name": "love.graphics.setFont",
+  "Signature": "love.graphics.setFont(font)",
+  "Kind": "function",
+  "Doc": "Définit la police courante."
+ },
+ {
+  "Name": "love.graphics.newQuad",
+  "Signature": "love.graphics.newQuad(x, y, w, h, sw, sh) -> Quad",
+  "Kind": "function",
+  "Doc": "Découpe une zone d'une image (sprite sheet)."
+ },
+ {
+  "Name": "love.graphics.getWidth",
+  "Signature": "love.graphics.getWidth() -> number",
+  "Kind": "function",
+  "Doc": "Largeur de l'écran (320)."
+ },
+ {
+  "Name": "love.graphics.getHeight",
+  "Signature": "love.graphics.getHeight() -> number",
+  "Kind": "function",
+  "Doc": "Hauteur de l'écran (240)."
+ },
+ {
+  "Name": "love.graphics.push",
+  "Signature": "love.graphics.push()",
+  "Kind": "function",
+  "Doc": "Empile l'état de transformation courant."
+ },
+ {
+  "Name": "love.graphics.pop",
+  "Signature": "love.graphics.pop()",
+  "Kind": "function",
+  "Doc": "Dépile l'état de transformation."
+ },
+ {
+  "Name": "love.graphics.translate",
+  "Signature": "love.graphics.translate(dx, dy)",
+  "Kind": "function",
+  "Doc": "Translate le repère de dessin."
+ },
+ {
+  "Name": "love.graphics.rotate",
+  "Signature": "love.graphics.rotate(angle)",
+  "Kind": "function",
+  "Doc": "Tourne le repère de dessin (radians)."
+ },
+ {
+  "Name": "love.graphics.origin",
+  "Signature": "love.graphics.origin()",
+  "Kind": "function",
+  "Doc": "Réinitialise les transformations."
+ },
+ {
+  "Name": "love.graphics.setScissor",
+  "Signature": "love.graphics.setScissor(x, y, w, h)",
+  "Kind": "function",
+  "Doc": "Limite le dessin à un rectangle (clipping)."
+ },
+ {
+  "Name": "love.graphics.setBackgroundColor",
+  "Signature": "love.graphics.setBackgroundColor(r, g, b)",
+  "Kind": "function",
+  "Doc": "Couleur de fond de l'écran."
+ },
+ {
+  "Name": "love.audio.newSource",
+  "Signature": "love.audio.newSource(path, type) -> Source",
+  "Kind": "function",
+  "Doc": "Charge un son. type = \"static\" ou \"stream\"."
+ },
+ {
+  "Name": "love.audio.setVolume",
+  "Signature": "love.audio.setVolume(v)",
+  "Kind": "function",
+  "Doc": "Règle le volume général (0–1)."
+ },
+ {
+  "Name": "love.keyboard.isDown",
+  "Signature": "love.keyboard.isDown(key) -> bool",
+  "Kind": "function",
+  "Doc": "True si la touche est actuellement enfoncée."
+ },
+ {
+  "Name": "love.timer.getTime",
+  "Signature": "love.timer.getTime() -> number",
+  "Kind": "function",
+  "Doc": "Temps écoulé en secondes (horloge haute résolution)."
+ },
+ {
+  "Name": "love.timer.sleep",
+  "Signature": "love.timer.sleep(s)",
+  "Kind": "function",
+  "Doc": "Pause de s secondes."
+ },
+ {
+  "Name": "love.math.random",
+  "Signature": "love.math.random(min, max) -> number",
+  "Kind": "function",
+  "Doc": "Nombre aléatoire (sans argument : 0–1 ; un argument : 1–n ; deux : min–max)."
+ },
+ {
+  "Name": "love.math.setRandomSeed",
+  "Signature": "love.math.setRandomSeed(seed)",
+  "Kind": "function",
+  "Doc": "Fixe la graine du générateur aléatoire."
+ },
+ {
+  "Name": "love.filesystem.read",
+  "Signature": "love.filesystem.read(path) -> string",
+  "Kind": "function",
+  "Doc": "Lit tout le contenu d'un fichier."
+ },
+ {
+  "Name": "love.filesystem.write",
+  "Signature": "love.filesystem.write(path, data) -> bool",
+  "Kind": "function",
+  "Doc": "Écrit des données dans un fichier."
+ },
+ {
+  "Name": "love.filesystem.getInfo",
+  "Signature": "love.filesystem.getInfo(path) -> table | nil",
+  "Kind": "function",
+  "Doc": "Infos sur un fichier/dossier (nil s'il n'existe pas)."
+ },
+ {
+  "Name": "love.filesystem.getDirectoryItems",
+  "Signature": "love.filesystem.getDirectoryItems(dir) -> table",
+  "Kind": "function",
+  "Doc": "Liste le contenu d'un dossier."
+ },
+ {
+  "Name": "love.event.quit",
+  "Signature": "love.event.quit()",
+  "Kind": "function",
+  "Doc": "Demande la fermeture du jeu."
+ },
+ {
+  "Name": "love.system.getOS",
+  "Signature": "love.system.getOS() -> string",
+  "Kind": "function",
+  "Doc": "Nom du système (\"AKA\" sur la console)."
+ },
+ {
+  "Name": "love.mouse.getPosition",
+  "Signature": "love.mouse.getPosition() -> x, y",
+  "Kind": "function",
+  "Doc": "Position du curseur (si pris en charge)."
+ },
+ {
+  "Name": "love.aka.setScaleMode",
+  "Signature": "love.aka.setScaleMode(mode)",
+  "Kind": "function",
+  "Doc": "Extension AKA : mode de mise à l'échelle de l'écran."
+ },
+ {
+  "Name": "love.aka.setInputMode",
+  "Signature": "love.aka.setInputMode(mode)",
+  "Kind": "function",
+  "Doc": "Extension AKA : configuration des entrées (boutons/manette)."
+ },
+ {
+  "Name": "love.aka.useNativeResolution",
+  "Signature": "love.aka.useNativeResolution(on)",
+  "Kind": "function",
+  "Doc": "Extension AKA : rendu en 320×240 natif."
+ },
+ {
+  "Name": "love.aka.version",
+  "Signature": "love.aka.version() -> string",
+  "Kind": "function",
+  "Doc": "Extension AKA : version du runtime akalove."
+ }
+]

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -18,6 +20,7 @@ namespace GamebuinoAKA.App.ViewModels
         private readonly IScriptRuntimeService _runtime;
         private readonly ISettingsService _settings;
         private readonly IFileDialogService _files;
+        private readonly IApiCatalogService _api;
 
         [ObservableProperty] private string _scriptText = "";
         [ObservableProperty] private string _currentFile = "";
@@ -33,6 +36,15 @@ namespace GamebuinoAKA.App.ViewModels
             _ => "—"
         };
         public bool HasFile => !string.IsNullOrEmpty(CurrentFile);
+        /// <summary>Symboles d'API du langage courant (autocomplétion + aide au survol).</summary>
+        public IReadOnlyList<ApiSymbol> ApiSymbols => _api.GetSymbols(Kind);
+
+        /// <summary>Emplacements d'erreur détectés dans la dernière exécution (cliquables).</summary>
+        public ObservableCollection<ErrorLocation> Errors { get; } = new();
+        public bool HasErrors => Errors.Count > 0;
+
+        /// <summary>Ligne vers laquelle l'éditeur doit sauter (la vue s'y abonne).</summary>
+        [ObservableProperty] private int? _gotoLine;
         /// <summary>Syntaxe AvaloniaEdit à appliquer ("Python" / "Lua" / null).</summary>
         public string? Highlighting => Kind == ProjectKind.Love2D ? "Lua"
             : Kind == ProjectKind.MicroPython ? "Python" : null;
@@ -41,12 +53,15 @@ namespace GamebuinoAKA.App.ViewModels
         {
             OnPropertyChanged(nameof(KindLabel));
             OnPropertyChanged(nameof(Highlighting));
+            OnPropertyChanged(nameof(ApiSymbols));
         }
         partial void OnCurrentFileChanged(string value) => OnPropertyChanged(nameof(HasFile));
 
-        public ScriptEditorViewModel(IScriptRuntimeService runtime, ISettingsService settings, IFileDialogService files)
+        public ScriptEditorViewModel(IScriptRuntimeService runtime, ISettingsService settings,
+            IFileDialogService files, IApiCatalogService api)
         {
-            _runtime = runtime; _settings = settings; _files = files;
+            _runtime = runtime; _settings = settings; _files = files; _api = api;
+            Errors.CollectionChanged += (_, __) => OnPropertyChanged(nameof(HasErrors));
         }
 
         [RelayCommand]
@@ -93,7 +108,7 @@ namespace GamebuinoAKA.App.ViewModels
             var folder = Path.GetDirectoryName(Path.GetFullPath(CurrentFile))!;
             var kind = _runtime.DetectKind(folder);
             if (!_runtime.IsScript(kind)) kind = Kind; // repli sur l'extension
-            IsBusy = true; OutputLog = "";
+            IsBusy = true; OutputLog = ""; Errors.Clear();
             try { await _runtime.RunOnPcAsync(folder, kind, Append); }
             catch (Exception ex) { Append("Erreur : " + ex.Message); }
             finally { IsBusy = false; }
@@ -116,6 +131,62 @@ namespace GamebuinoAKA.App.ViewModels
             return !string.IsNullOrEmpty(CurrentFile);
         }
 
-        private void Append(string line) => Dispatcher.UIThread.Post(() => OutputLog += line + "\n");
+        private void Append(string line) => Dispatcher.UIThread.Post(() =>
+        {
+            OutputLog += line + "\n";
+            foreach (var sub in line.Split('\n'))
+            {
+                var loc = TracebackParser.ParseLine(sub);
+                if (loc != null) Errors.Add(loc);
+            }
+        });
+
+        [RelayCommand]
+        private void GoToError(ErrorLocation? loc)
+        {
+            if (loc != null) OpenFileAt(loc.File, loc.Line);
+        }
+
+        /// <summary>
+        /// Ouvre le fichier (résolu relativement au script courant si nécessaire) et
+        /// positionne l'éditeur à la ligne donnée. « &lt;stdin&gt; » ou fichier introuvable :
+        /// on reste sur le fichier courant et on saute quand même à la ligne.
+        /// </summary>
+        public void OpenFileAt(string file, int line)
+        {
+            try
+            {
+                string? resolved = null;
+                if (!string.IsNullOrWhiteSpace(file) && file != "<stdin>")
+                {
+                    if (File.Exists(file)) resolved = file;
+                    else if (!string.IsNullOrEmpty(CurrentFile))
+                    {
+                        var folder = Path.GetDirectoryName(Path.GetFullPath(CurrentFile));
+                        if (folder != null)
+                        {
+                            var cand = Path.Combine(folder, Path.GetFileName(file));
+                            if (File.Exists(cand)) resolved = cand;
+                        }
+                    }
+                }
+
+                if (resolved != null &&
+                    !string.Equals(Path.GetFullPath(resolved),
+                        string.IsNullOrEmpty(CurrentFile) ? "" : Path.GetFullPath(CurrentFile),
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    ScriptText = File.ReadAllText(resolved);
+                    CurrentFile = resolved;
+                    Kind = Path.GetExtension(resolved).Equals(".lua", StringComparison.OrdinalIgnoreCase)
+                        ? ProjectKind.Love2D : ProjectKind.MicroPython;
+                }
+
+                // Toggle pour forcer le déclenchement même si on reste sur la même ligne.
+                GotoLine = null;
+                GotoLine = line;
+            }
+            catch (Exception ex) { Status = "Erreur : " + ex.Message; }
+        }
     }
 }
