@@ -12,7 +12,11 @@ namespace GamebuinoAKA.Core.Models
         public string IdfSerialPort { get; set; } = string.Empty;
         public string ReferenceGamebuinoComponentPath { get; set; } = string.Empty;
         public string VSCodePath { get; set; } = string.Empty;
+<<<<<<< HEAD
 	/// <summary>Émulateur PC : run.sh (Linux) ou aka-front.exe (Windows). Vide = auto-détection.</summary>
+=======
+        /// <summary>Émulateur PC : run.sh (Linux) ou aka-front.exe (Windows). Vide = auto-détection.</summary>
+>>>>>>> 9d7a3aaf74a8eea634aa5ae4d431bc8acc0d9bdb
         public string EmulatorPath { get; set; } = string.Empty;
 
         // ── Projets script (MicroPython / Love2D) ───────────────────────────────
