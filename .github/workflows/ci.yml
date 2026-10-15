@@ -84,6 +84,52 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true
           --output artifacts/${{ matrix.runtime }}
 
+      # Embarque les simulateurs PC (aka-py-sim MicroPython + akalove-play Love2D)
+      # et akatransfer.py dans <publish>/sims/, récupérés depuis les dernières
+      # releases des dépôts MycroPython et akalove. Non bloquant : si une release
+      # manque, l'IDE se construit quand même (l'utilisateur peut renseigner le
+      # chemin du simulateur dans les Paramètres).
+      - name: Bundle PC simulators (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SIMS="artifacts/${{ matrix.runtime }}/sims"
+          mkdir -p "$SIMS"
+          tmp="$(mktemp -d)"
+          gh release download --repo Jicehel-Aka/MycroPython --pattern 'micropython-aka-sim-linux-x64-*.zip' -D "$tmp/mp"   || true
+          gh release download --repo Jicehel-Aka/akalove       --pattern 'aka-love-sim-linux-x64-*.zip'       -D "$tmp/love" || true
+          ls -A "$tmp/mp"   2>/dev/null | grep -q . && unzip -o "$tmp"/mp/*.zip   -d "$tmp/mpx"   || true
+          ls -A "$tmp/love" 2>/dev/null | grep -q . && unzip -o "$tmp"/love/*.zip -d "$tmp/lovex" || true
+          cp "$tmp"/mpx/aka-py-sim     "$SIMS/" 2>/dev/null || true
+          cp "$tmp"/lovex/akalove-play "$SIMS/" 2>/dev/null || true
+          chmod +x "$SIMS"/* 2>/dev/null || true
+          curl -fsSL -o "$SIMS/akatransfer.py" https://raw.githubusercontent.com/Jicehel-Aka/akalove/main/tools/akatransfer.py || true
+          echo "Contenu de sims/ :"; ls -la "$SIMS" || true
+
+      - name: Bundle PC simulators (Windows)
+        if: matrix.os == 'windows-latest'
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $sims = "artifacts/${{ matrix.runtime }}/sims"
+          New-Item -ItemType Directory -Force -Path $sims | Out-Null
+          $tmp = Join-Path $env:RUNNER_TEMP "sims"
+          New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+          gh release download --repo Jicehel-Aka/MycroPython --pattern 'micropython-aka-sim-windows-x64-*.zip' -D "$tmp/mp"
+          gh release download --repo Jicehel-Aka/akalove       --pattern 'aka-love-sim-windows-x64-*.zip'       -D "$tmp/love"
+          Get-ChildItem "$tmp/mp/*.zip"   -ErrorAction SilentlyContinue | ForEach-Object { Expand-Archive $_.FullName -DestinationPath "$tmp/mpx"   -Force }
+          Get-ChildItem "$tmp/love/*.zip" -ErrorAction SilentlyContinue | ForEach-Object { Expand-Archive $_.FullName -DestinationPath "$tmp/lovex" -Force }
+          Copy-Item "$tmp/mpx/aka-py-sim.exe"     $sims -ErrorAction SilentlyContinue
+          Copy-Item "$tmp/lovex/akalove-play.exe" $sims -ErrorAction SilentlyContinue
+          Copy-Item "$tmp/mpx/SDL2.dll"           $sims -ErrorAction SilentlyContinue
+          Copy-Item "$tmp/lovex/SDL2.dll"         $sims -ErrorAction SilentlyContinue
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Jicehel-Aka/akalove/main/tools/akatransfer.py" -OutFile "$sims/akatransfer.py" -ErrorAction SilentlyContinue
+          Get-ChildItem $sims
+
       # Spécifique Linux : permissions exécutables + archive tar.gz
       - name: Package Linux Archive (tar.gz)
         if: matrix.os == 'ubuntu-latest'
