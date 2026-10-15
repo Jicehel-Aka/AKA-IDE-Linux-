@@ -11,9 +11,6 @@ namespace GamebuinoAKA.Core.Tests
     internal class TempPlatformPaths : IPlatformPaths
     {
         public string Root { get; } = Path.Combine(Path.GetTempPath(), "GamebuinoTests_" + Guid.NewGuid().ToString("N"));
-        // Le dossier GUID n'existe pas tant qu'on ne le crée pas : on le fait dès la
-        // construction pour que toute suite puisse écrire directement dans Root.
-        public TempPlatformPaths() => Directory.CreateDirectory(Root);
         public string ConfigDirectory => Path.Combine(Root, "config");
         public string DataDirectory => Path.Combine(Root, "data");
         public string CacheDirectory => Path.Combine(Root, "cache");

@@ -16,6 +16,7 @@
                 <Button Content="🗺  Tilemaps" HorizontalAlignment="Stretch" Command="{Binding NavigateToTilemapEditorCommand}"/>
                 <Button Content="🔊  Banque de sons" HorizontalAlignment="Stretch" Command="{Binding NavigateToSoundBankCommand}"/>
                 <Button Content="🐍  Scripts (Py/Lua)" HorizontalAlignment="Stretch" Command="{Binding NavigateToScriptEditorCommand}"/>
+                <Button Content="🧱  Studio Blockly" HorizontalAlignment="Stretch" Command="{Binding NavigateToBlocklyCommand}"/>
                 <Button Content="🧩  Procédures" HorizontalAlignment="Stretch" Command="{Binding NavigateToSnippetsCommand}"/>
                 <Button Content="⚙  Paramètres" HorizontalAlignment="Stretch" Command="{Binding NavigateToSettingsCommand}"/>
             </StackPanel>

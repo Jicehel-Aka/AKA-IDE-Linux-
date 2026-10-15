@@ -16,6 +16,7 @@ namespace GamebuinoAKA.App.ViewModels
         public SoundBankViewModel SoundBank { get; }
         public SnippetsViewModel Snippets { get; }
         public ScriptEditorViewModel ScriptEditor { get; }
+        public BlocklyViewModel Blockly { get; }
 
         [ObservableProperty] private object? _currentPage;
 
@@ -36,6 +37,7 @@ namespace GamebuinoAKA.App.ViewModels
             SoundBank = new SoundBankViewModel(soundBank, projects, launcher, files);
             Snippets = new SnippetsViewModel(snippets);
             ScriptEditor = new ScriptEditorViewModel(scriptRuntime, settings, files);
+            Blockly = new BlocklyViewModel(this);
 
             NavigateToProjects();
         }
@@ -49,5 +51,6 @@ namespace GamebuinoAKA.App.ViewModels
         [RelayCommand] public void NavigateToSoundBank() => CurrentPage = SoundBank;
         [RelayCommand] public void NavigateToSnippets() => CurrentPage = Snippets;
         [RelayCommand] public void NavigateToScriptEditor() => CurrentPage = ScriptEditor;
+        [RelayCommand] public void NavigateToBlockly() => CurrentPage = Blockly;
     }
 }

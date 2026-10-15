@@ -10,19 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Cadre MicroPython (game8266/upygame/urandom/umachine/sprite) + servant
-         au gabarit « Nouveau projet MicroPython ». Copié dans la sortie de tout
-         consommateur (App ET tests), d'où TemplateService les lit via
-         AppContext.BaseDirectory. Miroir de MycroPython/sdcard_files/py. -->
-    <Content Include="Templates\**\*" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="SkiaSharp" Version="2.88.8" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
-    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
