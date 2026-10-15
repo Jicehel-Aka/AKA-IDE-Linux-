@@ -1,0 +1,302 @@
+[
+ {
+  "Name": "aka.color",
+  "Signature": "aka.color(r, g, b) -> int",
+  "Kind": "function",
+  "Doc": "Renvoie une couleur RGB565 à partir de composantes 0–255."
+ },
+ {
+  "Name": "aka.set_color",
+  "Signature": "aka.set_color(r, g, b)",
+  "Kind": "function",
+  "Doc": "Définit la couleur de tracé courante (0–255 par composante)."
+ },
+ {
+  "Name": "aka.clear",
+  "Signature": "aka.clear(r=0, g=0, b=0)",
+  "Kind": "function",
+  "Doc": "Efface l'écran (noir par défaut, ou la couleur RGB donnée)."
+ },
+ {
+  "Name": "aka.pixel",
+  "Signature": "aka.pixel(x, y)",
+  "Kind": "function",
+  "Doc": "Allume un pixel à la couleur courante."
+ },
+ {
+  "Name": "aka.hline",
+  "Signature": "aka.hline(x, y, w)",
+  "Kind": "function",
+  "Doc": "Trace une ligne horizontale de largeur w."
+ },
+ {
+  "Name": "aka.vline",
+  "Signature": "aka.vline(x, y, h)",
+  "Kind": "function",
+  "Doc": "Trace une ligne verticale de hauteur h."
+ },
+ {
+  "Name": "aka.line",
+  "Signature": "aka.line(x0, y0, x1, y1)",
+  "Kind": "function",
+  "Doc": "Trace une ligne entre deux points."
+ },
+ {
+  "Name": "aka.rect",
+  "Signature": "aka.rect(x, y, w, h)",
+  "Kind": "function",
+  "Doc": "Trace le contour d'un rectangle."
+ },
+ {
+  "Name": "aka.fill_rect",
+  "Signature": "aka.fill_rect(x, y, w, h)",
+  "Kind": "function",
+  "Doc": "Dessine un rectangle plein."
+ },
+ {
+  "Name": "aka.circle",
+  "Signature": "aka.circle(x, y, r)",
+  "Kind": "function",
+  "Doc": "Trace le contour d'un cercle."
+ },
+ {
+  "Name": "aka.fill_circle",
+  "Signature": "aka.fill_circle(x, y, r)",
+  "Kind": "function",
+  "Doc": "Dessine un cercle plein."
+ },
+ {
+  "Name": "aka.triangle",
+  "Signature": "aka.triangle(x0, y0, x1, y1, x2, y2)",
+  "Kind": "function",
+  "Doc": "Trace le contour d'un triangle."
+ },
+ {
+  "Name": "aka.fill_triangle",
+  "Signature": "aka.fill_triangle(x0, y0, x1, y1, x2, y2)",
+  "Kind": "function",
+  "Doc": "Dessine un triangle plein."
+ },
+ {
+  "Name": "aka.text",
+  "Signature": "aka.text(x, y, s)",
+  "Kind": "function",
+  "Doc": "Affiche le texte s à (x, y) dans la couleur courante."
+ },
+ {
+  "Name": "aka.display",
+  "Signature": "aka.display()",
+  "Kind": "function",
+  "Doc": "Pousse le tampon graphique à l'écran sans attendre la cadence."
+ },
+ {
+  "Name": "aka.width",
+  "Signature": "aka.width() -> int",
+  "Kind": "function",
+  "Doc": "Largeur de l'écran en pixels (320)."
+ },
+ {
+  "Name": "aka.height",
+  "Signature": "aka.height() -> int",
+  "Kind": "function",
+  "Doc": "Hauteur de l'écran en pixels (240)."
+ },
+ {
+  "Name": "aka.update",
+  "Signature": "aka.update() -> bool",
+  "Kind": "function",
+  "Doc": "Fin de frame : rafraîchit l'écran, lit les entrées, cadence le framerate. Renvoie True tant que le jeu tourne (Échap revient au menu dans le simulateur)."
+ },
+ {
+  "Name": "aka.buttons",
+  "Signature": "aka.buttons() -> int",
+  "Kind": "function",
+  "Doc": "Masque de bits des boutons actuellement enfoncés (voir UP, A, …)."
+ },
+ {
+  "Name": "aka.pressed",
+  "Signature": "aka.pressed() -> int",
+  "Kind": "function",
+  "Doc": "Masque des boutons pressés à cette frame (front montant)."
+ },
+ {
+  "Name": "aka.released",
+  "Signature": "aka.released() -> int",
+  "Kind": "function",
+  "Doc": "Masque des boutons relâchés à cette frame."
+ },
+ {
+  "Name": "aka.joystick",
+  "Signature": "aka.joystick() -> tuple",
+  "Kind": "function",
+  "Doc": "Renvoie (x, y) de la manette analogique."
+ },
+ {
+  "Name": "aka.ticks_ms",
+  "Signature": "aka.ticks_ms() -> int",
+  "Kind": "function",
+  "Doc": "Millisecondes écoulées depuis le démarrage."
+ },
+ {
+  "Name": "aka.sleep_ms",
+  "Signature": "aka.sleep_ms(ms)",
+  "Kind": "function",
+  "Doc": "Pause bloquante de ms millisecondes."
+ },
+ {
+  "Name": "aka.vibrate",
+  "Signature": "aka.vibrate(ms)",
+  "Kind": "function",
+  "Doc": "Fait vibrer la console pendant ms millisecondes."
+ },
+ {
+  "Name": "aka.is_vibrating",
+  "Signature": "aka.is_vibrating() -> bool",
+  "Kind": "function",
+  "Doc": "True si une vibration est en cours."
+ },
+ {
+  "Name": "aka.play_pcm8",
+  "Signature": "aka.play_pcm8(data, loop=False)",
+  "Kind": "function",
+  "Doc": "Joue un son PCM 8 bits non signé (0–255, 128 = silence). loop=True pour boucler."
+ },
+ {
+  "Name": "aka.is_sound_playing",
+  "Signature": "aka.is_sound_playing() -> bool",
+  "Kind": "function",
+  "Doc": "True si un son est en cours de lecture."
+ },
+ {
+  "Name": "aka.language",
+  "Signature": "aka.language() -> str",
+  "Kind": "function",
+  "Doc": "Code langue courant de la console (ex. \"fr\", \"en\")."
+ },
+ {
+  "Name": "aka.tr",
+  "Signature": "aka.tr(key) -> str",
+  "Kind": "function",
+  "Doc": "Traduction de la chaîne key dans la langue courante."
+ },
+ {
+  "Name": "aka.screenshot",
+  "Signature": "aka.screenshot() -> bool",
+  "Kind": "function",
+  "Doc": "Capture l'écran courant dans un fichier. Renvoie True si réussi."
+ },
+ {
+  "Name": "aka.receive_code",
+  "Signature": "aka.receive_code()",
+  "Kind": "function",
+  "Doc": "Affiche l'écran « Recevoir un code » (transfert série). Bloque jusqu'à MENU."
+ },
+ {
+  "Name": "aka.run_file",
+  "Signature": "aka.run_file(path)",
+  "Kind": "function",
+  "Doc": "Exécute un autre script .py."
+ },
+ {
+  "Name": "aka.file_read",
+  "Signature": "aka.file_read(path) -> bytes | None",
+  "Kind": "function",
+  "Doc": "Lit un fichier et renvoie son contenu (bytes), ou None s'il est absent."
+ },
+ {
+  "Name": "aka.file_write",
+  "Signature": "aka.file_write(path, data) -> bool",
+  "Kind": "function",
+  "Doc": "Écrit data (bytes/str) dans un fichier. Renvoie True si OK."
+ },
+ {
+  "Name": "aka.list_py",
+  "Signature": "aka.list_py(dir) -> list",
+  "Kind": "function",
+  "Doc": "Liste les fichiers .py présents dans un dossier."
+ },
+ {
+  "Name": "aka.set_controls",
+  "Signature": "aka.set_controls(lines)",
+  "Kind": "function",
+  "Doc": "Définit l'aide « Commandes » du menu système (liste de chaînes, max 12)."
+ },
+ {
+  "Name": "aka.set_credits",
+  "Signature": "aka.set_credits(title, author, year, extra)",
+  "Kind": "function",
+  "Doc": "Renseigne les crédits affichés dans le menu système."
+ },
+ {
+  "Name": "aka.UP",
+  "Signature": "aka.UP",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Haut » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.DOWN",
+  "Signature": "aka.DOWN",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Bas » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.LEFT",
+  "Signature": "aka.LEFT",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Gauche » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.RIGHT",
+  "Signature": "aka.RIGHT",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Droite » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.A",
+  "Signature": "aka.A",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Bouton A » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.B",
+  "Signature": "aka.B",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Bouton B » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.C",
+  "Signature": "aka.C",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Bouton C » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.D",
+  "Signature": "aka.D",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Bouton D » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.RUN",
+  "Signature": "aka.RUN",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Bouton RUN » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.MENU",
+  "Signature": "aka.MENU",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Bouton MENU » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.L1",
+  "Signature": "aka.L1",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Gâchette L1 » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.R1",
+  "Signature": "aka.R1",
+  "Kind": "constant",
+  "Doc": "Masque de bits du bouton « Gâchette R1 » (à tester avec aka.buttons()/pressed()/released())."
+ }
+]
