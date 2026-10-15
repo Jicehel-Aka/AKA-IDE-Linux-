@@ -110,10 +110,13 @@ namespace GamebuinoAKA.App.ViewModels
         {
             PlatformIOPath = _pio.DetectPioPath();
             VSCodePath = _vscode.DetectVSCodePath();
+
             var export = _idf.DetectExportScript();
             if (!string.IsNullOrEmpty(export)) IdfExportScript = export;
+
             var emu = _emulator.DetectEmulatorPath();
             if (!string.IsNullOrEmpty(emu)) EmulatorPath = emu;
+
             var ports = _idf.DetectSerialPorts();
             if (ports.Length == 1) IdfSerialPort = ports[0];
             var pio = string.IsNullOrEmpty(PlatformIOPath) ? "non trouvé" : "OK";
