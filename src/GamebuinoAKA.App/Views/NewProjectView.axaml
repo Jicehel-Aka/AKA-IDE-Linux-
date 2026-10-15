@@ -9,8 +9,11 @@
             <TextBlock Text="Nom du projet"/>
             <TextBox Text="{Binding ProjectName}"/>
 
-            <TextBlock Text="Type de projet" Margin="0,8,0,0"/>
-            <ComboBox ItemsSource="{Binding ProjectTypes}" SelectedItem="{Binding SelectedProjectType}" HorizontalAlignment="Left" MinWidth="240"/>
+            <TextBlock Text="Chaîne de build" Margin="0,8,0,0"/>
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <RadioButton GroupName="bs" Content="ESP-IDF (coquille)" IsChecked="{Binding IsEspIdf}"/>
+                <RadioButton GroupName="bs" Content="PlatformIO (Arduino)"/>
+            </StackPanel>
 
             <StackPanel IsVisible="{Binding IsPlatformIO}">
                 <TextBlock Text="Template" Margin="0,8,0,0"/>
@@ -21,11 +24,6 @@
                 <CheckBox Content="Ajouter le support audio (mixeur + tâche + module audio.h/.cpp)" IsChecked="{Binding AddAudio}"/>
                 <TextBlock Text="Génère la plomberie minimale : appuyez sur A dans le projet pour un bip. Utilisez audio_beep(), audio_sfx(), audio_music_note()."
                            Foreground="#888" FontSize="11" TextWrapping="Wrap" Margin="24,2,0,0"/>
-            </StackPanel>
-
-            <StackPanel IsVisible="{Binding IsMicroPython}" Margin="0,8,0,0">
-                <TextBlock Text="Crée un projet script .py prêt à tourner : main.py d'exemple (déplacer un carré, A change la couleur) + le cadre game8266/upygame. Testez-le avec « Tester (PC) » ou envoyez-le sur la console."
-                           Foreground="#888" FontSize="11" TextWrapping="Wrap"/>
             </StackPanel>
 
             <TextBlock Text="Dossier de destination" Margin="0,8,0,0"/>

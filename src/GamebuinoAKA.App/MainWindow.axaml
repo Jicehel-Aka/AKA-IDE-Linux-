@@ -15,7 +15,6 @@
                 <Button Content="🎨  Sprites" HorizontalAlignment="Stretch" Command="{Binding NavigateToSpriteEditorCommand}"/>
                 <Button Content="🗺  Tilemaps" HorizontalAlignment="Stretch" Command="{Binding NavigateToTilemapEditorCommand}"/>
                 <Button Content="🔊  Banque de sons" HorizontalAlignment="Stretch" Command="{Binding NavigateToSoundBankCommand}"/>
-                <Button Content="🐍  Scripts (Py/Lua)" HorizontalAlignment="Stretch" Command="{Binding NavigateToScriptEditorCommand}"/>
                 <Button Content="🧩  Procédures" HorizontalAlignment="Stretch" Command="{Binding NavigateToSnippetsCommand}"/>
                 <Button Content="⚙  Paramètres" HorizontalAlignment="Stretch" Command="{Binding NavigateToSettingsCommand}"/>
             </StackPanel>
