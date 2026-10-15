@@ -12,6 +12,16 @@ namespace GamebuinoAKA.Core.Models
         public string IdfSerialPort { get; set; } = string.Empty;
         public string ReferenceGamebuinoComponentPath { get; set; } = string.Empty;
         public string VSCodePath { get; set; } = string.Empty;
+        /// <summary>Émulateur PC : run.sh (Linux) ou aka-front.exe (Windows). Vide = auto-détection.</summary>
+        public string EmulatorPath { get; set; } = string.Empty;
+
+        // ── Projets script (MicroPython / Love2D) ───────────────────────────────
+        /// <summary>Simulateur PC Love2D (override). Vide = version embarquée sims/akalove-play.</summary>
+        public string LoveSimPath { get; set; } = string.Empty;
+        /// <summary>Simulateur PC MicroPython (override). Vide = version embarquée sims/aka-py-sim.</summary>
+        public string MicroPythonSimPath { get; set; } = string.Empty;
+        /// <summary>Outil akatransfer.py (override). Vide = version embarquée sims/akatransfer.py.</summary>
+        public string AkaTransferPath { get; set; } = string.Empty;
         public string Theme { get; set; } = "Dark";
         public BuildSystem DefaultBuildSystem { get; set; } = BuildSystem.EspIdf;
         public ColorFormat DefaultColorFormat { get; set; } = ColorFormat.Bgr565Aka;
