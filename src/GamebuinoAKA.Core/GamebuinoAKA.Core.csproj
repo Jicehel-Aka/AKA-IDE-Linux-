@@ -10,7 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Cadre MicroPython (game8266/upygame/urandom/umachine/sprite) + servant
+         au gabarit « Nouveau projet MicroPython ». Copié dans la sortie de tout
+         consommateur (App ET tests), d'où TemplateService les lit via
+         AppContext.BaseDirectory. Miroir de MycroPython/sdcard_files/py. -->
     <Content Include="Templates\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Catalogues d'API (module aka, Love2D) pour l'autocomplétion + l'aide au survol
+         de l'éditeur de scripts ; lus via AppContext.BaseDirectory, comme Templates. -->
     <Content Include="Api\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
