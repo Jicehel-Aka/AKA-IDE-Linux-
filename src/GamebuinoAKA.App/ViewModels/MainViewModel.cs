@@ -26,8 +26,7 @@ namespace GamebuinoAKA.App.ViewModels
             IApplicationLauncher launcher, IPlatformIOService pio, IEspIdfService idf,
             AssetService asset, ISoundBankService soundBank, ICodeSnippetService snippets,
             IEmulatorService emulator, IScriptRuntimeService scriptRuntime,
-            IFileDialogService files, IDialogService dialogs,
-            ISerialMonitorService serial, IApiCatalogService apiCatalog)
+            IFileDialogService files, IDialogService dialogs)
         {
             Home = new HomeViewModel(this);
             Projects = new ProjectsViewModel(projects, build, git, vscode, launcher, emulator, settings, this, dialogs);
