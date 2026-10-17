@@ -21,6 +21,7 @@ namespace GamebuinoAKA.App.ViewModels
         private readonly ISettingsService _settings;
         private readonly IFileDialogService _files;
         private readonly IApiCatalogService _api;
+        private readonly ISerialMonitorService _serial;
 
         [ObservableProperty] private string _scriptText = "";
         [ObservableProperty] private string _currentFile = "";
@@ -58,9 +59,9 @@ namespace GamebuinoAKA.App.ViewModels
         partial void OnCurrentFileChanged(string value) => OnPropertyChanged(nameof(HasFile));
 
         public ScriptEditorViewModel(IScriptRuntimeService runtime, ISettingsService settings,
-            IFileDialogService files, IApiCatalogService api)
+            IFileDialogService files, IApiCatalogService api, ISerialMonitorService serial)
         {
-            _runtime = runtime; _settings = settings; _files = files; _api = api;
+            _runtime = runtime; _settings = settings; _files = files; _api = api; _serial = serial;
             Errors.CollectionChanged += (_, __) => OnPropertyChanged(nameof(HasErrors));
         }
 
@@ -112,6 +113,26 @@ namespace GamebuinoAKA.App.ViewModels
             try { await _runtime.RunOnPcAsync(folder, kind, Append); }
             catch (Exception ex) { Append("Erreur : " + ex.Message); }
             finally { IsBusy = false; }
+        }
+
+        [RelayCommand]
+        private void RunOnDeviceRepl()
+        {
+            if (Kind != ProjectKind.MicroPython)
+            {
+                Status = "Le REPL ne s'applique qu'aux scripts MicroPython (.py)."; return;
+            }
+            if (!_serial.IsOpen)
+            {
+                Status = "Connectez d'abord l'AKA dans l'onglet « Console / Série »."; return;
+            }
+            if (string.IsNullOrEmpty(ScriptText)) { Status = "Rien à exécuter."; return; }
+            try
+            {
+                _serial.RunViaRawRepl(ScriptText);
+                Status = "Script envoyé au REPL de l'AKA — sortie dans « Console / Série ».";
+            }
+            catch (Exception ex) { Status = "Erreur : " + ex.Message; }
         }
 
         [RelayCommand]

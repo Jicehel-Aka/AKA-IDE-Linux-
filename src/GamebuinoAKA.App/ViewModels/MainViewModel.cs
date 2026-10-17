@@ -41,7 +41,7 @@ namespace GamebuinoAKA.App.ViewModels
             TilemapEditor = new TilemapEditorViewModel(asset, files);
             SoundBank = new SoundBankViewModel(soundBank, projects, launcher, files);
             Snippets = new SnippetsViewModel(snippets);
-            ScriptEditor = new ScriptEditorViewModel(scriptRuntime, settings, files, apiCatalog);
+            ScriptEditor = new ScriptEditorViewModel(scriptRuntime, settings, files, apiCatalog, serial);
             Console = new ConsoleViewModel(serial, settings, this);
             Examples = new ExamplesViewModel(exampleCatalog, templates, settings, this, files, dialogs);
             Blockly = new BlocklyViewModel(this);

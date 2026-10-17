@@ -10,6 +10,7 @@
             <Button Content="💾 Enregistrer" Command="{Binding SaveCommand}"/>
             <Border Width="1" Background="#333" Margin="4,0"/>
             <Button Content="▶ Tester (PC)" Command="{Binding RunOnPcCommand}"/>
+            <Button Content="⚡ Exécuter sur l'AKA (REPL)" Command="{Binding RunOnDeviceReplCommand}"/>
             <Button Content="⬆ Envoyer à l'AKA" Command="{Binding SendToDeviceCommand}"/>
             <TextBlock Text="{Binding KindLabel}" Foreground="#8A63D2" VerticalAlignment="Center" Margin="8,0,0,0"/>
             <ProgressBar IsIndeterminate="True" Width="70" IsVisible="{Binding IsBusy}"/>

@@ -33,5 +33,10 @@ namespace GamebuinoAKA.Core.Services
 
         /// <summary>Envoie du texte brut vers la carte (sans ajout de fin de ligne).</summary>
         void Send(string text);
+
+        /// <summary>Exécute du code MicroPython sur la carte via le raw-REPL (sans écrire
+        /// de fichier) : interrompt, bascule en raw REPL, envoie le code et l'exécute.
+        /// La sortie revient par <see cref="DataReceived"/>.</summary>
+        void RunViaRawRepl(string code);
     }
 }

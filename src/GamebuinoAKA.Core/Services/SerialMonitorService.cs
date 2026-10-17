@@ -110,6 +110,35 @@ namespace GamebuinoAKA.Core.Services
             }
         }
 
+        public void RunViaRawRepl(string code)
+        {
+            if (!IsOpen) throw new InvalidOperationException("Port série non connecté.");
+            if (string.IsNullOrEmpty(code)) return;
+
+            // Protocole raw-REPL MicroPython : Ctrl-C (interrompt), Ctrl-A (entre en
+            // raw REPL), code + Ctrl-D (exécute), Ctrl-B (retour REPL amical). La
+            // sortie revient par la boucle de lecture normale (affichée dans la console).
+            StatusChanged?.Invoke("[REPL] Envoi du script sur la carte…");
+            Task.Run(() =>
+            {
+                try
+                {
+                    Send("\r\x03\x03");           // réveil + double Ctrl-C
+                    Thread.Sleep(120);
+                    Send("\x01");                 // Ctrl-A : raw REPL
+                    Thread.Sleep(120);
+                    Send(code);
+                    Send("\x04");                 // Ctrl-D : exécute
+                    Thread.Sleep(120);
+                    Send("\x02");                 // Ctrl-B : REPL amical
+                }
+                catch (Exception ex)
+                {
+                    StatusChanged?.Invoke("[REPL] Échec : " + ex.Message);
+                }
+            });
+        }
+
         public void Close()
         {
             SerialPort? toClose;
