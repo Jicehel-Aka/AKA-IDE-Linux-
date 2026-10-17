@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GamebuinoAKA.App.Views.ExamplesView"
+             x:CompileBindings="False">
+    <Grid RowDefinitions="Auto,*" Margin="12">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="Galerie d'exemples" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+            <TextBlock Text="— ouvrez un exemple dans l'éditeur ou créez-en un projet (cadre inclus)"
+                       Foreground="#AAA" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnDefinitions="300,*">
+            <!-- Liste des exemples -->
+            <Border Grid.Column="0" BorderBrush="#333" BorderThickness="1" CornerRadius="4" Margin="0,0,10,0">
+                <ListBox ItemsSource="{Binding Examples}" SelectedItem="{Binding Selected}" Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="4" Spacing="2">
+                                <TextBlock Text="{Binding Title}" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding Language}" FontSize="10" Foreground="#8A63D2"/>
+                                <TextBlock Text="{Binding Description}" FontSize="11" Foreground="#AAA" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <!-- Aperçu + actions -->
+            <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                    <Button Content="📝 Ouvrir dans l'éditeur" Command="{Binding OpenInEditorCommand}"
+                            IsEnabled="{Binding HasSelection}"/>
+                    <Button Content="📁 Créer un projet…" Command="{Binding CreateProjectCommand}"
+                            IsEnabled="{Binding HasSelection}"/>
+                </StackPanel>
+
+                <Border Grid.Row="1" BorderBrush="#333" BorderThickness="1" CornerRadius="4" Background="#111">
+                    <ScrollViewer>
+                        <TextBox Text="{Binding Preview}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                                 FontFamily="Cascadia Mono,Consolas,Menlo,monospace" FontSize="12"
+                                 Background="Transparent" BorderThickness="0" Padding="8"/>
+                    </ScrollViewer>
+                </Border>
+
+                <TextBlock Grid.Row="2" Text="{Binding Status}" Foreground="#AAA" Margin="0,6,0,0"/>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

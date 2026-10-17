@@ -13,5 +13,12 @@ namespace GamebuinoAKA.Core.Services
         /// sprite.py). Exécutable tel quel via « Tester (PC) » (aka-py-sim).
         /// </summary>
         Task CreateMicroPythonProjectAsync(string projectName, string destinationFolder);
+
+        /// <summary>
+        /// Crée un projet MicroPython à partir du source d'un exemple de la galerie :
+        /// écrit <paramref name="mainPyContent"/> comme main.py et copie le cadre
+        /// embarqué. Exécutable tel quel via « Tester (PC) ».
+        /// </summary>
+        Task CreateMicroPythonProjectFromContentAsync(string projectName, string destinationFolder, string mainPyContent);
     }
 }

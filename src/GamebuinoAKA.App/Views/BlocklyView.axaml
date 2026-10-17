@@ -31,7 +31,7 @@
                     <Button Command="{Binding SendToScriptEditorCommand}"
                             Background="#3b82f6" Foreground="#ffffff" FontWeight="SemiBold"
                             Padding="12,6" CornerRadius="6">
-                        <TextBlock Text="Basculer vers l'Éditeur Python" />
+                        <TextBlock Text="Envoyer le code vers l'Éditeur Python" />
                     </Button>
                 </StackPanel>
             </Grid>

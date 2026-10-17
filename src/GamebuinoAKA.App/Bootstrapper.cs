@@ -31,13 +31,14 @@ namespace GamebuinoAKA.App
             var scriptRt  = new ScriptRuntimeService(settings, runner, tools);
             var serial    = new SerialMonitorService();
             var apiCat    = new ApiCatalogService();
+            var exCat     = new ExampleCatalogService();
 
             var files     = new AvaloniaFileDialogService();
             var dialogs   = new AvaloniaDialogService();
 
             return new MainViewModel(settings, projects, templates, build, git,
                                      vscode, launcher, pio, idf, asset, soundBank, snippets,
-                                     emulator, scriptRt, files, dialogs, serial, apiCat);
+                                     emulator, scriptRt, files, dialogs, serial, apiCat, exCat);
         }
     }
 }

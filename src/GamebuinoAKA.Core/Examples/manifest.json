@@ -1,0 +1,72 @@
+[
+ {
+  "Id": "demo",
+  "Title": "Démo",
+  "Description": "Petite démo graphique : formes, texte et animation. Idéal pour un premier coup d'œil à l'API aka.",
+  "Language": "MicroPython",
+  "File": "py/demo.py"
+ },
+ {
+  "Id": "pong",
+  "Title": "Pong",
+  "Description": "Le classique Pong à deux raquettes. Collisions, score, rebonds — bon exemple de boucle de jeu.",
+  "Language": "MicroPython",
+  "File": "py/pong.py"
+ },
+ {
+  "Id": "snake",
+  "Title": "Snake",
+  "Description": "Le serpent qui grandit. Gestion de grille, file de segments et détection de collision.",
+  "Language": "MicroPython",
+  "File": "py/snake.py"
+ },
+ {
+  "Id": "invader",
+  "Title": "Invaders",
+  "Description": "Space Invaders : vagues d'ennemis, tirs et score. Bon exemple de gestion de nombreux objets.",
+  "Language": "MicroPython",
+  "File": "py/invader.py"
+ },
+ {
+  "Id": "breakout",
+  "Title": "Casse-briques",
+  "Description": "Casse-briques complet : briques, balle, raquette, niveaux.",
+  "Language": "MicroPython",
+  "File": "py/breakout.py"
+ },
+ {
+  "Id": "puissance4",
+  "Title": "Puissance 4",
+  "Description": "Puissance 4 à deux joueurs : grille, détection d'alignement, IA simple.",
+  "Language": "MicroPython",
+  "File": "py/puissance4.py"
+ },
+ {
+  "Id": "tetris",
+  "Title": "Tetris",
+  "Description": "Tetris : pièces, rotation, lignes complètes, accélération. Exemple avancé.",
+  "Language": "MicroPython",
+  "File": "py/tetris.py"
+ },
+ {
+  "Id": "bataille_navale",
+  "Title": "Bataille navale",
+  "Description": "Bataille navale : placement des navires, tir au tour par tour.",
+  "Language": "MicroPython",
+  "File": "py/bataille_navale.py"
+ },
+ {
+  "Id": "calculatrice",
+  "Title": "Calculatrice scientifique",
+  "Description": "Calculatrice avec sprites, sons et tracé de courbes. Utilise les modules math et upygame.",
+  "Language": "MicroPython",
+  "File": "py/calculatrice.py"
+ },
+ {
+  "Id": "feu_artifice",
+  "Title": "Feu d'artifice",
+  "Description": "Démo de particules utilisant plusieurs modules standards (random, time, collections, array, struct, json).",
+  "Language": "MicroPython",
+  "File": "py/feu_artifice.py"
+ }
+]

@@ -46,6 +46,25 @@ namespace GamebuinoAKA.Core.Services
             // sous <base>/Templates/micropython/framework/. Le main.py d'exemple
             // en dépend (import game8266). Sans ces fichiers, le projet ne
             // tournerait pas : on laisse alors une note explicite.
+            await CopyMicroPythonFramework(projectDir);
+        }
+
+        public async Task CreateMicroPythonProjectFromContentAsync(string projectName, string destinationFolder, string mainPyContent)
+        {
+            var projectDir = Path.Combine(destinationFolder, projectName);
+            Directory.CreateDirectory(projectDir);
+
+            await Write(projectDir, "main.py", mainPyContent ?? "");
+            await Write(projectDir, "README.md", MicroPythonReadme(projectName));
+            await CopyMicroPythonFramework(projectDir);
+        }
+
+        // Copie le cadre (game8266.py, upygame.py, ...) embarqué avec l'IDE sous
+        // <base>/Templates/micropython/framework/. Les exemples en dépendent
+        // (import game8266). Sans ces fichiers, le projet ne tournerait pas : on
+        // laisse alors une note explicite.
+        private async Task CopyMicroPythonFramework(string projectDir)
+        {
             var framework = Path.Combine(AppContext.BaseDirectory, "Templates", "micropython", "framework");
             if (Directory.Exists(framework))
             {

@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GamebuinoAKA.Core.Models;
 using GamebuinoAKA.Core.Platform;
 using GamebuinoAKA.Core.Services;
 
@@ -17,6 +18,8 @@ namespace GamebuinoAKA.App.ViewModels
         public SnippetsViewModel Snippets { get; }
         public ScriptEditorViewModel ScriptEditor { get; }
         public ConsoleViewModel Console { get; }
+        public ExamplesViewModel Examples { get; }
+        public BlocklyViewModel Blockly { get; }
 
         [ObservableProperty] private object? _currentPage;
 
@@ -27,7 +30,8 @@ namespace GamebuinoAKA.App.ViewModels
             AssetService asset, ISoundBankService soundBank, ICodeSnippetService snippets,
             IEmulatorService emulator, IScriptRuntimeService scriptRuntime,
             IFileDialogService files, IDialogService dialogs,
-            ISerialMonitorService serial, IApiCatalogService apiCatalog)
+            ISerialMonitorService serial, IApiCatalogService apiCatalog,
+            IExampleCatalogService exampleCatalog)
         {
             Home = new HomeViewModel(this);
             Projects = new ProjectsViewModel(projects, build, git, vscode, launcher, emulator, settings, this, dialogs);
@@ -39,6 +43,8 @@ namespace GamebuinoAKA.App.ViewModels
             Snippets = new SnippetsViewModel(snippets);
             ScriptEditor = new ScriptEditorViewModel(scriptRuntime, settings, files, apiCatalog);
             Console = new ConsoleViewModel(serial, settings, this);
+            Examples = new ExamplesViewModel(exampleCatalog, templates, settings, this, files, dialogs);
+            Blockly = new BlocklyViewModel(this);
 
             NavigateToProjects();
         }
@@ -53,10 +59,18 @@ namespace GamebuinoAKA.App.ViewModels
         [RelayCommand] public void NavigateToSnippets() => CurrentPage = Snippets;
         [RelayCommand] public void NavigateToScriptEditor() => CurrentPage = ScriptEditor;
         [RelayCommand] public void NavigateToConsole() => CurrentPage = Console;
+        [RelayCommand] public void NavigateToExamples() => CurrentPage = Examples;
+        [RelayCommand] public void NavigateToBlockly() => CurrentPage = Blockly;
 
         public void OpenScriptAt(string file, int line)
         {
             ScriptEditor.OpenFileAt(file, line);
+            CurrentPage = ScriptEditor;
+        }
+
+        public void OpenScriptContent(string suggestedName, string text, ProjectKind kind)
+        {
+            ScriptEditor.LoadContent(suggestedName, text, kind);
             CurrentPage = ScriptEditor;
         }
     }

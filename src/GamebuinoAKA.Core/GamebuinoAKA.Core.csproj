@@ -18,6 +18,8 @@
     <!-- Catalogues d'API (module aka, Love2D) pour l'autocomplétion + l'aide au survol
          de l'éditeur de scripts ; lus via AppContext.BaseDirectory, comme Templates. -->
     <Content Include="Api\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Scripts d'exemple (galerie) : manifest.json + py/*.py, lus via AppContext.BaseDirectory. -->
+    <Content Include="Examples\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

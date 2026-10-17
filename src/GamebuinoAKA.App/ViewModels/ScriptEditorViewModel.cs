@@ -148,6 +148,21 @@ namespace GamebuinoAKA.App.ViewModels
         }
 
         /// <summary>
+        /// Charge un contenu de script non enregistré dans l'éditeur (galerie d'exemples,
+        /// code généré par Blockly…). L'utilisateur l'enregistre ensuite où il veut.
+        /// </summary>
+        public void LoadContent(string suggestedName, string text, ProjectKind kind)
+        {
+            ScriptText = text ?? "";
+            CurrentFile = "";
+            Kind = kind;
+            Errors.Clear();
+            Status = string.IsNullOrWhiteSpace(suggestedName)
+                ? "Script chargé (non enregistré — utilisez Enregistrer)."
+                : $"Chargé : {suggestedName} (non enregistré — utilisez Enregistrer).";
+        }
+
+        /// <summary>
         /// Ouvre le fichier (résolu relativement au script courant si nécessaire) et
         /// positionne l'éditeur à la ligne donnée. « &lt;stdin&gt; » ou fichier introuvable :
         /// on reste sur le fichier courant et on saute quand même à la ligne.
