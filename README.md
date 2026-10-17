@@ -25,6 +25,13 @@ Environnement de développement intégré complet (**C# .NET 10 + Avalonia UI**)
 - 🔊 **Banque de Sons** : Écoute et gestion de bruitages et thèmes musicaux (.wav, .pmf, en-têtes C++).
 - 🧩 **Bibliothèque de Snippets (53 procédures)** : Formes géométriques, physique (gravité, rebond, vélocité), entrées D-Pad et boutons, timers et scores.
 
+### ✍️ Éditeur de Scripts & Débogage
+- 💡 **Autocomplétion & aide au survol** : Signatures et documentation du module `aka` (MicroPython) et de l'API Love2D, à la frappe (ou Ctrl-Espace) et au survol.
+- 🖥️ **Console / Moniteur série** : Sortie console de l'AKA réelle sur le PC (REPL MicroPython, `print()`, logs), choix du port et du débit, renvoi de commandes (Entrée, Ctrl-C).
+- 🔗 **Erreurs cliquables** : Les tracebacks du simulateur ou de la carte deviennent cliquables et sautent directement à la ligne fautive dans l'éditeur.
+- ⚡ **REPL interactif** : Exécuter le script courant sur la carte via le raw-REPL, sans écrire de fichier, pour une boucle d'essai quasi instantanée.
+- 📚 **Galerie d'exemples** : 10 jeux prêts à l'emploi (Pong, Snake, Tetris, Calculatrice…) à ouvrir dans l'éditeur ou à transformer en projet (cadre inclus).
+
 ### 🧱 Studio Visuel Blockly & Tutoriels
 - 🧱 **Programmation par Blocs** : Conception visuelle accessible aux débutants avec double export automatique en **MicroPython** et **C++ Arduino**.
 - 📚 **9 Parcours Guidés Multilingues (FR, EN, DE, IT, PT, ES)** :
@@ -40,9 +47,9 @@ Environnement de développement intégré complet (**C# .NET 10 + Avalonia UI**)
 
 ---
 
-## 📦 Téléchargements (Release v2.3.0)
+## 📦 Téléchargements (Release v2.4.0)
 
-Rendez-vous dans la section [Releases](https://github.com/Jicehel-Aka/AKA-IDE-Linux-/releases/tag/v2.3.0) pour télécharger les binaires autonomes :
+Rendez-vous dans la section [Releases](https://github.com/Jicehel-Aka/AKA-IDE-Linux-/releases/tag/v2.4.0) pour télécharger les binaires autonomes :
 - 🐧 **Linux (x64)** : `GamebuinoAKA-IDE-linux-x64.tar.gz`
 - 🪟 **Windows (x64)** : `GamebuinoAKA-IDE-windows-x64.zip`
 - 🔒 **Empreintes de sécurité** : `SHA256SUMS.txt`
