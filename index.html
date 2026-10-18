@@ -293,7 +293,8 @@
   defineBlocks([
     {type:"aka_update_loop",message0:"répéter chaque frame %1 %2",
      args0:[{type:"input_dummy"},{type:"input_statement",name:"DO"}],
-     colour:C_SCREEN,tooltip:"Boucle de jeu : s'exécute ~60 fois par seconde."},
+     previousStatement:null,
+     colour:C_SCREEN,tooltip:"Boucle de jeu : s'exécute ~60 fois/s. Mets les initialisations (variables) AU-DESSUS du bloc."},
     {type:"aka_clear",message0:"effacer l'écran",previousStatement:null,nextStatement:null,
      colour:C_SCREEN,tooltip:"Efface l'écran (noir)."},
     {type:"aka_set_color",message0:"couleur R %1 V %2 B %3",
@@ -580,6 +581,26 @@
     zoom:{controls:true,wheel:true,startScale:.95,maxScale:2,minScale:.4,scaleSpeed:1.1},
     move:{scrollbars:true,drag:true,wheel:true}
   });
+  // Catégorie Variables : on redéfinit le flyout pour que « mettre … à » arrive avec une valeur
+  // numérique par défaut (0) dans sa case, au lieu d'un emplacement vide.
+  try{
+    ws.registerToolboxCategoryCallback("VARIABLE", function(workspace){
+      var xmlList = Blockly.Variables.flyoutCategory(workspace);
+      try{
+        xmlList.forEach(function(node){
+          if(node && node.tagName && node.tagName.toLowerCase()==="block" && node.getAttribute("type")==="variables_set"
+             && !node.querySelector('value[name="VALUE"]')){
+            var v=Blockly.utils.xml.createElement("value"); v.setAttribute("name","VALUE");
+            var s=Blockly.utils.xml.createElement("shadow"); s.setAttribute("type","math_number");
+            var f=Blockly.utils.xml.createElement("field"); f.setAttribute("name","NUM");
+            f.appendChild(Blockly.utils.xml.createTextNode("0"));
+            s.appendChild(f); v.appendChild(s); node.appendChild(v);
+          }
+        });
+      }catch(e){}
+      return xmlList;
+    });
+  }catch(e){}
   function resize(){ if(ws) Blockly.svgResize(ws); }
   var ro=new ResizeObserver(resize); ro.observe(document.getElementById("blocklyArea"));
   window.addEventListener("resize",resize);
@@ -702,10 +723,11 @@
       if(n>=6) lost.push(_vib(150));
       body.push(_if(_cmp(_getv("balle_x"),"LT",_num(0)),lost));
     }
-    var loop={type:"aka_update_loop",x:30,y:(init.length?220:40),inputs:{DO:{block:_chain(body)}}};
-    var tops=[]; if(init.length){ var ini=_chain(init); ini.x=30; ini.y=30; tops.push(ini); } tops.push(loop);
+    var loop={type:"aka_update_loop",inputs:{DO:{block:_chain(body)}}};
+    // pile unique : les initialisations (variables) sont AU-DESSUS de la boucle -> exécutées une seule fois.
+    var top=_chain(init.concat([loop])); top.x=30; top.y=30;
     var vars=Object.keys(_VARS).map(function(nm){return {name:nm,id:_VARS[nm]};});
-    return {blocks:{languageVersion:0,blocks:tops},variables:vars};
+    return {blocks:{languageVersion:0,blocks:[top]},variables:vars};
   }
 
   // ---- Contenu du parcours « Pong rétro » (API aka réelle) ------------------
@@ -715,8 +737,8 @@
       instr:[
         {t:"Place le bloc « <b>répéter chaque frame</b> » : c'est la boucle de jeu (~60 FPS).",req:"aka_update_loop"},
         {t:"Dans la boucle, commence par « <b>effacer l'écran</b> ».",req:"aka_clear"},
-        {t:"Choisis le blanc avec « <b>couleur R V B</b> » (255, 255, 255).",req:"aka_set_color"},
-        {t:"Ajoute « <b>texte</b> » pour écrire « PONG AKA » en haut (x 110, y 12).",req:"aka_text"}
+        {t:"Choisis le blanc avec « <b>couleur R V B</b> » = <b>255, 255, 255</b>.",check:function(){return _any("aka_set_color",function(b){return _fv(b,"R")=="255"&&_fv(b,"G")=="255"&&_fv(b,"B")=="255";});}},
+        {t:"Ajoute « <b>texte</b> » pour écrire « <b>PONG AKA</b> » en haut (x 110, y 12).",check:function(){return _any("aka_text",function(b){return (_fv(b,"TXT")||"").toUpperCase().indexOf("PONG")>=0;});}}
       ],
       blocks:[{n:"Répéter chaque frame",cat:"Écran"},{n:"Effacer l'écran",cat:"Écran"},{n:"Couleur R V B",cat:"Dessin"},{n:"Texte",cat:"Dessin"}],
       hints:["Sur une console, si on n'efface pas l'écran à chaque image, les dessins précédents laissent des traînées.","« Répéter chaque frame » et « Effacer l'écran » sont dans la catégorie <b>Écran</b>.","« Couleur » et « Texte » sont dans <b>Dessin</b>."],
@@ -725,10 +747,10 @@
     { badge:"Contrôles joueur", title:"La raquette & le D-Pad",
       objective:"Dessiner la raquette à gauche et la déplacer de haut en bas avec la croix directionnelle (Haut / Bas maintenus).",
       instr:[
-        {t:"Crée une variable « <b>raquette_y</b> » à 100 (bloc « mettre … à », catégorie Variables).",req:"variables_set"},
-        {t:"Ajoute un « <b>si … alors</b> » : si « bouton Haut maintenu », diminue raquette_y de 3.",req:"controls_if"},
-        {t:"Détecte l'appui avec « <b>bouton … maintenu</b> ».",req:"aka_button"},
-        {t:"Dessine la raquette : « <b>rectangle plein</b> » x 20, y = raquette_y, larg 6, haut 40.",req:"aka_fill_rect"}
+        {t:"Mets « raquette_y » à <b>100</b> <b>AU-DESSUS</b> de la boucle (sinon elle est remise à 100 à chaque image et ne bouge jamais).",check:function(){return _any("variables_set",function(b){return _ni(b,"VALUE")===100&&!_inLoop(b);});}},
+        {t:"Dans la boucle : « <b>si bouton Haut maintenu</b> », diminue raquette_y de 3 (monter).",check:function(){return _any("aka_button",function(b){return _fv(b,"BTN")==="UP"&&_fv(b,"MODE")==="held";});}},
+        {t:"Ajoute aussi « <b>si bouton Bas maintenu</b> », augmente raquette_y de 3 (descendre).",check:function(){return _any("aka_button",function(b){return _fv(b,"BTN")==="DOWN"&&_fv(b,"MODE")==="held";});}},
+        {t:"Dessine la raquette : « <b>rectangle plein</b> » x <b>20</b>, y = raquette_y, larg <b>6</b>, haut <b>40</b>.",check:function(){return _any("aka_fill_rect",function(b){return _ni(b,"X")===20&&_ni(b,"W")===6&&_ni(b,"H")===40;});}}
       ],
       blocks:[{n:"Bouton (enfoncé/maintenu/relâché)",cat:"Entrées"},{n:"Si … alors",cat:"Logique"},{n:"Rectangle plein",cat:"Dessin"},{n:"Variable (mettre … à)",cat:"Variables"}],
       hints:["Les blocs de bouton sont dans <b>Entrées</b> ; choisis le mode « maintenu ».","Le « si … alors » est dans <b>Logique</b>.","Pour la position verticale, stocke-la dans une variable (<b>Variables</b>)."],
@@ -737,10 +759,10 @@
     { badge:"Physique & mouvement", title:"La balle & les rebonds",
       objective:"Faire apparaître la balle, la faire avancer et rebondir contre le haut et le bas de l'écran.",
       instr:[
-        {t:"Crée les variables <b>balle_x</b>=160, <b>balle_y</b>=120, <b>vx</b>=3, <b>vy</b>=2.",req:"variables_set"},
-        {t:"À chaque frame, ajoute vx à balle_x et vy à balle_y (<b>opération +</b>).",req:"math_arithmetic"},
+        {t:"<b>AU-DESSUS</b> de la boucle, crée <b>balle_x</b>=160, <b>balle_y</b>=120, <b>vx</b>=3, <b>vy</b>=2 (une fois, pas dans la boucle).",check:function(){return _any("variables_set",function(b){return _ni(b,"VALUE")===160&&!_inLoop(b);});}},
+        {t:"Dans la boucle, ajoute vx à balle_x et vy à balle_y (<b>opération +</b>).",req:"math_arithmetic"},
         {t:"Si balle_y ≤ 0 ou ≥ 230, inverse la vitesse verticale (vy × -1) — <b>comparaison</b>.",req:"logic_compare"},
-        {t:"Dessine la balle avec « <b>cercle plein</b> » (rayon 4).",req:"aka_fill_circle"}
+        {t:"Dessine la balle avec « <b>cercle plein</b> » de <b>rayon 4</b>.",check:function(){return _any("aka_fill_circle",function(b){return _ni(b,"R")===4;});}}
       ],
       blocks:[{n:"Cercle plein",cat:"Dessin"},{n:"Comparaison (≤, ≥)",cat:"Logique"},{n:"Opération (+, ×)",cat:"Valeurs"}],
       hints:["Les comparaisons et le « si » sont dans <b>Logique</b>.","Les opérations maths sont dans <b>Valeurs</b>.","Inverser une vitesse = la multiplier par -1."],
@@ -751,7 +773,7 @@
       instr:[
         {t:"Teste la collision balle/raquette avec « <b>collision A … B …</b> ».",req:"aka_collide"},
         {t:"Quand ça touche, inverse la vitesse horizontale (vx × -1).",req:"logic_compare"},
-        {t:"Joue un son avec « <b>jouer son … Hz</b> » (440 Hz, 60 ms).",req:"aka_tone"},
+        {t:"Joue un son avec « <b>jouer son … Hz</b> » = <b>440 Hz</b>, 60 ms.",check:function(){return _any("aka_tone",function(b){return _ni(b,"FREQ")===440;});}},
         {t:"Teste au simulateur : bouge la raquette pour renvoyer la balle."}
       ],
       blocks:[{n:"Collision A / B",cat:"Logique"},{n:"Jouer un son",cat:"Son & Musique"}],
@@ -761,9 +783,9 @@
     { badge:"Score & remise en jeu", title:"Score & réinitialisation",
       objective:"Compter les renvois réussis et remettre la balle au centre si elle sort par la gauche.",
       instr:[
-        {t:"Crée une variable « <b>score</b> » = 0.",req:"variables_set"},
-        {t:"À chaque renvoi réussi (dans la collision), augmente score de 1."},
-        {t:"Affiche un libellé « <b>Score:</b> » en haut à gauche.",req:"aka_text"},
+        {t:"<b>AU-DESSUS</b> de la boucle, crée « <b>score</b> » = <b>0</b>.",check:function(){return _any("variables_set",function(b){return _ni(b,"VALUE")===0&&!_inLoop(b);});}},
+        {t:"À chaque renvoi réussi (dans la collision), augmente score de 1 (« <b>changer … de 1</b> »).",req:"math_change"},
+        {t:"Affiche un libellé « <b>Score:</b> » en haut à gauche.",check:function(){return _any("aka_text",function(b){return (_fv(b,"TXT")||"").toLowerCase().indexOf("score")>=0;});}},
         {t:"Si balle_x &lt; 0, replace la balle au centre (160, 120) — <b>comparaison</b>.",req:"logic_compare"}
       ],
       blocks:[{n:"Texte (Score)",cat:"Dessin"},{n:"Changer variable de 1",cat:"Variables"},{n:"Comparaison",cat:"Logique"}],
@@ -773,7 +795,7 @@
     { badge:"Fonctionnalités AKA", title:"Le vibreur haptique",
       objective:"Exploiter le vibreur de la console : faire vibrer quand la balle est perdue. (Les LEDs Neopixels ne sont pas encore montées sur la carte — cette étape se concentre sur le vibreur, qui existe.)",
       instr:[
-        {t:"Quand la balle est perdue (balle_x &lt; 0), ajoute « <b>vibrer 150 ms</b> ».",req:"aka_vibrate"},
+        {t:"Quand la balle est perdue (balle_x &lt; 0), ajoute « <b>vibrer</b> » = <b>150 ms</b>.",check:function(){return _any("aka_vibrate",function(b){return _ni(b,"MS")===150;});}},
         {t:"🎉 Félicitations : ton Pong rétro est complet et n'utilise que de vraies fonctions AKA !"}
       ],
       blocks:[{n:"Vibrer (ms)",cat:"Entrées"}],
@@ -784,7 +806,14 @@
   var STEPS=BUILTIN, builtin=true, stepIdx=0, lastDone=0;
 
   function blockPresent(type){ try{ return ws.getBlocksByType(type,false).length>0; }catch(e){ return false; } }
-  function stepComplete(i){ return STEPS[i].instr.every(function(x){ return x.req ? blockPresent(x.req) : true; }); }
+  // Helpers de contrôle de VALEUR (utilisés par les checks d'étape)
+  function _any(t,p){ try{ return ws.getBlocksByType(t,false).some(function(b){ try{return p(b);}catch(e){return false;} }); }catch(e){ return false; } }
+  function _fv(b,n){ try{ return b.getFieldValue(n); }catch(e){ return null; } }
+  function _ni(b,n){ try{ var t=b.getInputTargetBlock(n); return (t&&t.type==="math_number")?Number(t.getFieldValue("NUM")):null; }catch(e){ return null; } }
+  function _inLoop(b){ try{ var p=b.getSurroundParent&&b.getSurroundParent(); while(p){ if(p.type==="aka_update_loop") return true; p=p.getSurroundParent&&p.getSurroundParent(); } }catch(e){} return false; }
+  function insDone(x){ if(x.check){ try{ return !!x.check(); }catch(e){ return false; } } if(x.req) return blockPresent(x.req); return !!x._manual; }
+  function insRequired(x){ return !!(x.check || x.req); }
+  function stepComplete(i){ return STEPS[i].instr.every(function(x){ return insRequired(x) ? insDone(x) : true; }); }
   function countDone(){ var c=0; for(var i=0;i<STEPS.length;i++) if(stepComplete(i)) c++; return c; }
 
   function renderTuto(){
@@ -806,10 +835,10 @@
     // instructions
     var ul=document.getElementById("tInstr"); ul.innerHTML="";
     S.instr.forEach(function(ins){
-      var ok=ins.req?blockPresent(ins.req):!!ins._manual;
+      var ok=insDone(ins);
       var li=document.createElement("li"); li.className=ok?"done":"";
       var box=document.createElement("span"); box.className="chk"; box.textContent=ok?"☑":"☐";
-      if(!ins.req){ box.style.cursor="pointer"; box.onclick=function(){ ins._manual=!ins._manual; renderTuto(); }; }
+      if(!insRequired(ins)){ box.style.cursor="pointer"; box.onclick=function(){ ins._manual=!ins._manual; renderTuto(); }; }
       var tx=document.createElement("span"); tx.innerHTML=ins.t;
       li.appendChild(box); li.appendChild(tx); ul.appendChild(li);
     });
@@ -837,8 +866,8 @@
 
   document.getElementById("checkBtn").onclick=function(){
     var i=stepIdx, S=STEPS[i], N=STEPS.length, v=document.getElementById("verdict");
-    var need=S.instr.filter(function(x){return x.req;});
-    var ok=need.every(function(x){return blockPresent(x.req);});
+    var need=S.instr.filter(insRequired);
+    var ok=need.every(insDone);
     if(ok){
       v.className="verdict ok";
       v.textContent=(i<N-1) ? ("Étape "+(i+1)+"/"+N+" validée ✓ — clique « Suivante → »." )
