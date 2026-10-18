@@ -14,8 +14,8 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
                     <TextBlock Text="🧱" FontSize="20" VerticalAlignment="Center" />
                     <StackPanel>
-                        <TextBlock Text="Studio Visuel Blockly &amp; Simulateur Gamebuino AKA" FontWeight="Bold" FontSize="14" Foreground="#f8fafc" />
-                        <TextBlock Text="9 tutoriels guidés multilingues, export MicroPython 60 FPS &amp; C++ natif" FontSize="11" Foreground="#94a3b8" />
+                        <TextBlock Text="Studio Blockly Gamebuino AKA" FontWeight="Bold" FontSize="14" Foreground="#f8fafc" />
+                        <TextBlock Text="Programmation par blocs → code MicroPython (API aka) prêt pour le simulateur et la carte" FontSize="11" Foreground="#94a3b8" />
                     </StackPanel>
                 </StackPanel>
 
@@ -25,63 +25,68 @@
                             Padding="12,6" CornerRadius="6">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBlock Text="🌐" />
-                            <TextBlock Text="Ouvrir le Studio Visuel Complet" />
+                            <TextBlock Text="Ouvrir le Studio Blockly" />
+                        </StackPanel>
+                    </Button>
+                    <Button Click="OnPasteFromStudio"
+                            Background="#334155" Foreground="#f8fafc" FontWeight="SemiBold"
+                            Padding="12,6" CornerRadius="6">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="📋" />
+                            <TextBlock Text="Coller le code du Studio" />
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding SendToScriptEditorCommand}"
                             Background="#3b82f6" Foreground="#ffffff" FontWeight="SemiBold"
                             Padding="12,6" CornerRadius="6">
-                        <TextBlock Text="Envoyer le code vers l'Éditeur Python" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="➡" />
+                            <TextBlock Text="Envoyer vers l'éditeur" />
+                        </StackPanel>
                     </Button>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- Contenu principal -->
-        <Grid Grid.Row="1" ColumnDefinitions="320, *" Margin="16">
-            <!-- Liste des 9 Tutoriels -->
-            <Border Grid.Column="0" Background="#0f172a" CornerRadius="8" BorderBrush="#334155" BorderThickness="1" Padding="12" Margin="0,0,12,0">
+        <Grid Grid.Row="1" ColumnDefinitions="340, *" Margin="16">
+            <!-- Comment ça marche -->
+            <Border Grid.Column="0" Background="#0f172a" CornerRadius="8" BorderBrush="#334155" BorderThickness="1" Padding="14" Margin="0,0,12,0">
                 <ScrollViewer>
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Catalogue des 9 Tutoriels (6 langues)" FontWeight="Bold" FontSize="12" Foreground="#38bdf8" Margin="0,0,0,6" />
-                        <Border Background="#1e293b" CornerRadius="6" Padding="8">
-                            <TextBlock Text="🏓 1. Pong Rétro Complet (5 étapes)" FontSize="11" Foreground="#f8fafc" />
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Comment ça marche" FontWeight="Bold" FontSize="12" Foreground="#38bdf8" />
+                        <StackPanel Spacing="8">
+                            <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="#e2e8f0" Text="1.  Clique « Ouvrir le Studio Blockly » : il s'ouvre dans ton navigateur." />
+                            <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="#e2e8f0" Text="2.  Assemble tes blocs, ou suis le tutoriel guidé « Pong » (6 étapes contrôlées, avec « Injecter dans Blockly »)." />
+                            <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="#e2e8f0" Text="3.  Coche « MicroPython » dans le studio, puis clique « Copier le code »." />
+                            <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="#e2e8f0" Text="4.  Reviens ici et clique « Coller le code du Studio » : il apparaît à droite." />
+                            <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="#e2e8f0" Text="5.  Clique « Envoyer vers l'éditeur » : le code s'ouvre dans l'éditeur de scripts, prêt pour « Tester (PC) » ou l'envoi sur la carte." />
+                        </StackPanel>
+                        <Border Background="#1e293b" CornerRadius="6" Padding="10">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="💡 Bon à savoir" FontWeight="SemiBold" FontSize="11.5" Foreground="#fcd34d" />
+                                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cbd5e1"
+                                           Text="Le studio génère la vraie API de la console (module aka). Tu peux aussi afficher le code Love2D (Lua) en parallèle via les cases à cocher du studio." />
+                            </StackPanel>
                         </Border>
-                        <Border Background="#1e293b" CornerRadius="6" Padding="8">
-                            <TextBlock Text="🚀 2. Shoot'em Up Spatial (6 étapes)" FontSize="11" Foreground="#f8fafc" />
-                        </Border>
-                        <Border Background="#1e293b" CornerRadius="6" Padding="8">
-                            <TextBlock Text="🏃 3. Plateforme avec Gravité (5 étapes)" FontSize="11" Foreground="#f8fafc" />
-                        </Border>
-                        <Border Background="#1e293b" CornerRadius="6" Padding="8">
-                            <TextBlock Text="🟡 4. Pac-Maze Labyrinthe (5 étapes)" FontSize="11" Foreground="#f8fafc" />
-                        </Border>
-                        <Border Background="#1e293b" CornerRadius="6" Padding="8">
-                            <TextBlock Text="🧮 5. Calculatrice Rétro D-Pad (4 étapes)" FontSize="11" Foreground="#f8fafc" />
-                        </Border>
-                        <Border Background="#1e293b" CornerRadius="6" Padding="8">
-                            <TextBlock Text="🐾 6. Animal Virtuel Tamagotchi (4 étapes)" FontSize="11" Foreground="#f8fafc" />
-                        </Border>
-                        <Border Background="#1e293b" CornerRadius="6" Padding="8">
-                            <TextBlock Text="🎹 7. Synthétiseur Chiptune (4 étapes)" FontSize="11" Foreground="#f8fafc" />
-                        </Border>
-                        <Border Background="#1e293b" CornerRadius="6" Padding="8">
-                            <TextBlock Text="⏱️ 8. Chrono Pomodoro (4 étapes)" FontSize="11" Foreground="#f8fafc" />
-                        </Border>
-                        <Border Background="#1e293b" CornerRadius="6" Padding="8">
-                            <TextBlock Text="⏳ 9. Minuteur Œufs &amp; Jeux (4 étapes)" FontSize="11" Foreground="#f8fafc" />
+                        <Border Background="#1e293b" CornerRadius="6" Padding="10">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="✍ Édition directe" FontWeight="SemiBold" FontSize="11.5" Foreground="#93c5fd" />
+                                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cbd5e1"
+                                           Text="La zone de droite est modifiable : tu peux coller ou retoucher le code avant de l'envoyer vers l'éditeur." />
+                            </StackPanel>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
 
-            <!-- Aperçu du Code MicroPython & Actions -->
+            <!-- Code MicroPython à envoyer -->
             <Border Grid.Column="1" Background="#0f172a" CornerRadius="8" BorderBrush="#334155" BorderThickness="1" Padding="12">
                 <Grid RowDefinitions="Auto, *, Auto">
-                    <TextBlock Grid.Row="0" Text="Gabarit MicroPython prêt à injecter :" FontWeight="Bold" FontSize="12" Foreground="#94a3b8" Margin="0,0,0,8" />
+                    <TextBlock Grid.Row="0" Text="Code MicroPython (collé depuis le Studio, modifiable) :" FontWeight="Bold" FontSize="12" Foreground="#94a3b8" Margin="0,0,0,8" />
                     <TextBox Grid.Row="1" Text="{Binding GeneratedPythonCode}" FontFamily="Consolas, monospace" FontSize="11"
                              AcceptsReturn="True" TextWrapping="Wrap" IsReadOnly="False" Background="#020617" Foreground="#a7f3d0" />
-                    <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" FontSize="11" Foreground="#64748b" Margin="0,8,0,0" />
+                    <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" FontSize="11" Foreground="#64748b" Margin="0,8,0,0" TextWrapping="Wrap" />
                 </Grid>
             </Border>
         </Grid>

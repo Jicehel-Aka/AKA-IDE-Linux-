@@ -18,22 +18,20 @@ namespace GamebuinoAKA.App.ViewModels
         private string _statusMessage = "Prêt - Studio Blockly Gamebuino AKA";
 
         [ObservableProperty]
-        private string _generatedPythonCode = @"# Modèle MicroPython généré par le Studio Blockly Gamebuino AKA.
+        private string _generatedPythonCode = @"# 1) Clique « Ouvrir le Studio Blockly » (le studio s'ouvre dans ton navigateur).
+# 2) Construis ton programme en blocs — ou suis le tutoriel guidé « Pong ».
+# 3) Dans le studio, coche « MicroPython » et clique « Copier le code ».
+# 4) Reviens ici, clique « Coller le code du Studio » : ton code apparaît ci-dessous.
+# 5) Clique « Envoyer vers l'éditeur » pour l'ouvrir dans l'éditeur de scripts
+#    (puis « Tester (PC) » au simulateur ou envoi sur la carte).
+#
 # API réelle de la console : module natif `aka`.
 import aka
 
-x = 160
 while aka.update():          # fin de frame : écran + entrées + cadence ~60 FPS
     aka.clear()
-    btn = aka.buttons()      # masque des boutons enfoncés
-    if btn & aka.LEFT:
-        x -= 2
-    if btn & aka.RIGHT:
-        x += 2
-    aka.set_color(0, 200, 255)
-    aka.fill_rect(x - 8, 112, 16, 16)
     aka.set_color(255, 255, 255)
-    aka.text(8, 8, ""Blockly -> MicroPython AKA"")
+    aka.text(8, 8, ""Colle ici le code de ton Studio Blockly"")
 ";
 
         public BlocklyViewModel(MainViewModel main)
@@ -65,6 +63,18 @@ while aka.update():          # fin de frame : écran + entrées + cadence ~60 FP
             {
                 StatusMessage = $"Erreur d'ouverture : {ex.Message}";
             }
+        }
+
+        /// <summary>Reçoit le code copié depuis le Studio (presse-papiers) et le place dans l'aperçu.</summary>
+        public void SetPastedCode(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                StatusMessage = "Presse-papiers vide : copie d'abord le code dans le Studio (bouton « Copier le code »).";
+                return;
+            }
+            GeneratedPythonCode = text.Replace("\r\n", "\n");
+            StatusMessage = "Code collé depuis le Studio. Clique « Envoyer vers l'éditeur ».";
         }
 
         [RelayCommand]
