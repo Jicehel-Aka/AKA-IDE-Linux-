@@ -760,8 +760,8 @@
       objective:"Faire apparaître la balle, la faire avancer et rebondir contre le haut et le bas de l'écran.",
       instr:[
         {t:"<b>AU-DESSUS</b> de la boucle, crée <b>balle_x</b>=160, <b>balle_y</b>=120, <b>vx</b>=3, <b>vy</b>=2 (une fois, pas dans la boucle).",check:function(){return _any("variables_set",function(b){return _ni(b,"VALUE")===160&&!_inLoop(b);});}},
-        {t:"Dans la boucle, ajoute vx à balle_x et vy à balle_y (<b>opération +</b>).",req:"math_arithmetic"},
-        {t:"Si balle_y ≤ 0 ou ≥ 230, inverse la vitesse verticale (vy × -1) — <b>comparaison</b>.",req:"logic_compare"},
+        {t:"Dans la boucle, mets balle_x à balle_x + vx (et balle_y à balle_y + vy) — <b>opération +</b>.",check:function(){return _any("variables_set",function(b){var t=_targ(b,"VALUE");return (_vname(b)==="balle_x"||_vname(b)==="balle_y")&&_inLoop(b)&&t&&t.type==="math_arithmetic";});}},
+        {t:"Si balle_y ≤ 0 ou ≥ 230, inverse la vitesse verticale (vy × -1) — <b>comparaison sur balle_y</b>.",check:function(){return _cmpHasVar("balle_y");}},
         {t:"Dessine la balle avec « <b>cercle plein</b> » de <b>rayon 4</b>.",check:function(){return _any("aka_fill_circle",function(b){return _ni(b,"R")===4;});}}
       ],
       blocks:[{n:"Cercle plein",cat:"Dessin"},{n:"Comparaison (≤, ≥)",cat:"Logique"},{n:"Opération (+, ×)",cat:"Valeurs"}],
@@ -772,7 +772,7 @@
       objective:"Faire rebondir la balle sur la raquette et jouer un petit son rétro à l'impact.",
       instr:[
         {t:"Teste la collision balle/raquette avec « <b>collision A … B …</b> ».",req:"aka_collide"},
-        {t:"Quand ça touche, inverse la vitesse horizontale (vx × -1).",req:"logic_compare"},
+        {t:"Quand ça touche, inverse la vitesse horizontale : mets vx à vx × -1.",check:function(){return _setArith("vx");}},
         {t:"Joue un son avec « <b>jouer son … Hz</b> » = <b>440 Hz</b>, 60 ms.",check:function(){return _any("aka_tone",function(b){return _ni(b,"FREQ")===440;});}},
         {t:"Teste au simulateur : bouge la raquette pour renvoyer la balle."}
       ],
@@ -784,9 +784,9 @@
       objective:"Compter les renvois réussis et remettre la balle au centre si elle sort par la gauche.",
       instr:[
         {t:"<b>AU-DESSUS</b> de la boucle, crée « <b>score</b> » = <b>0</b>.",check:function(){return _any("variables_set",function(b){return _ni(b,"VALUE")===0&&!_inLoop(b);});}},
-        {t:"À chaque renvoi réussi (dans la collision), augmente score de 1 (« <b>changer … de 1</b> »).",req:"math_change"},
+        {t:"À chaque renvoi réussi (dans la collision), augmente <b>score</b> de 1 (« <b>changer score de 1</b> »).",check:function(){return _changeVar("score");}},
         {t:"Affiche un libellé « <b>Score:</b> » en haut à gauche.",check:function(){return _any("aka_text",function(b){return (_fv(b,"TXT")||"").toLowerCase().indexOf("score")>=0;});}},
-        {t:"Si balle_x &lt; 0, replace la balle au centre (160, 120) — <b>comparaison</b>.",req:"logic_compare"}
+        {t:"Si balle_x &lt; 0, replace la balle au centre (160, 120) — <b>comparaison sur balle_x</b>.",check:function(){return _cmpHasVar("balle_x");}}
       ],
       blocks:[{n:"Texte (Score)",cat:"Dessin"},{n:"Changer variable de 1",cat:"Variables"},{n:"Comparaison",cat:"Logique"}],
       hints:["Le bloc « texte » affiche un libellé fixe ; la valeur du score vit dans la variable <b>score</b> (affichage de la valeur à venir).","« Changer … de 1 » est dans <b>Variables</b>.","La balle sort à gauche quand balle_x &lt; 0."],
@@ -811,6 +811,15 @@
   function _fv(b,n){ try{ return b.getFieldValue(n); }catch(e){ return null; } }
   function _ni(b,n){ try{ var t=b.getInputTargetBlock(n); return (t&&t.type==="math_number")?Number(t.getFieldValue("NUM")):null; }catch(e){ return null; } }
   function _inLoop(b){ try{ var p=b.getSurroundParent&&b.getSurroundParent(); while(p){ if(p.type==="aka_update_loop") return true; p=p.getSurroundParent&&p.getSurroundParent(); } }catch(e){} return false; }
+  function _vname(b){ try{ var f=b.getField("VAR"); var v=f&&f.getVariable&&f.getVariable(); return v?v.name:null; }catch(e){ return null; } }
+  function _targ(b,n){ try{ return b.getInputTargetBlock(n); }catch(e){ return null; } }
+  function _getvName(blk){ return (blk&&blk.type==="variables_get")?_vname(blk):null; }
+  // variables_set de <name> dont la valeur est une opération maths (ex: balle_x = balle_x + vx)
+  function _setArith(name){ return _any("variables_set",function(b){ if(_vname(b)!==name) return false; var t=_targ(b,"VALUE"); return !!(t&&t.type==="math_arithmetic"); }); }
+  // comparaison (logic_compare) portant sur la variable <name>
+  function _cmpHasVar(name){ return _any("logic_compare",function(b){ return _getvName(_targ(b,"A"))===name||_getvName(_targ(b,"B"))===name; }); }
+  // « changer <name> de … »
+  function _changeVar(name){ return _any("math_change",function(b){ return _vname(b)===name; }); }
   function insDone(x){ if(x.check){ try{ return !!x.check(); }catch(e){ return false; } } if(x.req) return blockPresent(x.req); return !!x._manual; }
   function insRequired(x){ return !!(x.check || x.req); }
   function stepComplete(i){ return STEPS[i].instr.every(function(x){ return insRequired(x) ? insDone(x) : true; }); }
