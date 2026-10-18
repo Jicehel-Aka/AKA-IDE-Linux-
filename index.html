@@ -576,6 +576,7 @@
     document.getElementById("tabTuto").setAttribute("aria-selected",String(!code));
     document.getElementById("paneCode").hidden=!code;
     document.getElementById("paneTuto").hidden=code;
+    if(!code) renderTuto();   // reflète l'état courant en ouvrant l'onglet Tutoriel
   }
   document.getElementById("tabCode").onclick=function(){selectTab("code");};
   document.getElementById("tabTuto").onclick=function(){selectTab("tuto");};
@@ -622,10 +623,19 @@
     var step=tutorial.steps[current];
     document.getElementById("hint").innerHTML=step?("💡 "+(step.hint||"")):"";
   }
+  var lastDone=0;
+  function countDone(){ var d=0; while(d<tutorial.steps.length&&stepDone(tutorial.steps[d])) d++; return d; }
   function refreshSteps(){
     // avance automatiquement le curseur jusqu'à la 1re étape non faite
-    var i=0; while(i<tutorial.steps.length&&stepDone(tutorial.steps[i])) i++;
-    current=Math.min(i,tutorial.steps.length-1);
+    var done=countDone();
+    current=Math.min(done,tutorial.steps.length-1);
+    var v=document.getElementById("verdict");
+    if(done===tutorial.steps.length){
+      v.className="verdict ok"; v.textContent="🎉 Bravo, tutoriel terminé ! Copie le code et teste-le dans l'IDE.";
+    } else if(done>lastDone){
+      v.className="verdict ok"; v.textContent="Étape "+done+" validée ✓ — passe à l'étape "+(done+1)+".";
+    }
+    lastDone=done;
     if(!document.getElementById("paneTuto").hidden) renderTuto();
   }
   document.getElementById("checkBtn").onclick=function(){
@@ -638,7 +648,7 @@
     renderTuto();
   };
   document.getElementById("resetTuto").onclick=function(){
-    current=0; document.getElementById("verdict").textContent=""; renderTuto();
+    current=0; lastDone=0; document.getElementById("verdict").textContent=""; renderTuto();
   };
 
   // ---- Import d'un tutoriel JSON -------------------------------------------
@@ -670,6 +680,7 @@
   restoreState();
   try{ var lp=JSON.parse(localStorage.getItem(LKEY)||"null"); if(lp){ showPy.checked=!!lp.py; showLua.checked=!!lp.lua; } }catch(e){}
   generate();
+  lastDone=countDone();   // synchronise le compteur pour que l'auto-validation marche dès la 1re action
   renderTuto();
   resize();
 })();
