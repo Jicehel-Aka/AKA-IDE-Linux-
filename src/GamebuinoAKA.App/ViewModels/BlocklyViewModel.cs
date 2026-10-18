@@ -46,7 +46,7 @@ while aka.update():          # fin de frame : écran + entrées + cadence ~60 FP
         {
             try
             {
-                var url = "https://ais-dev-i65yv6scujyfee7ezom4in-393028584716.europe-west2.run.app";
+                var url = "https://jicehel-aka.github.io/AKA-IDE-Linux-/";
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });

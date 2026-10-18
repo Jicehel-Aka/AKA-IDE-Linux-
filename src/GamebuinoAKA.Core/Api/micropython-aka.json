@@ -298,5 +298,65 @@
   "Signature": "aka.R1",
   "Kind": "constant",
   "Doc": "Masque de bits du bouton « Gâchette R1 » (à tester avec aka.buttons()/pressed()/released())."
+ },
+ {
+  "Name": "aka.set_brightness",
+  "Signature": "aka.set_brightness(percent)",
+  "Kind": "function",
+  "Doc": "Règle la luminosité de l'écran (0–100 %)."
+ },
+ {
+  "Name": "aka.brightness",
+  "Signature": "aka.brightness() -> int",
+  "Kind": "function",
+  "Doc": "Luminosité actuelle de l'écran (0–100 %)."
+ },
+ {
+  "Name": "aka.battery",
+  "Signature": "aka.battery() -> int",
+  "Kind": "function",
+  "Doc": "Niveau de batterie en pourcentage (0–100)."
+ },
+ {
+  "Name": "aka.power_off",
+  "Signature": "aka.power_off()",
+  "Kind": "function",
+  "Doc": "Éteint la console."
+ },
+ {
+  "Name": "aka.loader",
+  "Signature": "aka.loader()",
+  "Kind": "function",
+  "Doc": "Revient au loader (menu de lancement des jeux)."
+ },
+ {
+  "Name": "aka.tone",
+  "Signature": "aka.tone(freq_hz, duration_ms=200)",
+  "Kind": "function",
+  "Doc": "Joue un bip carré de fréquence freq_hz (Hz) pendant duration_ms."
+ },
+ {
+  "Name": "aka.no_tone",
+  "Signature": "aka.no_tone()",
+  "Kind": "function",
+  "Doc": "Arrête le son en cours (tone)."
+ },
+ {
+  "Name": "aka.set_volume",
+  "Signature": "aka.set_volume(percent)",
+  "Kind": "function",
+  "Doc": "Règle le volume général (0–100 %)."
+ },
+ {
+  "Name": "aka.volume",
+  "Signature": "aka.volume() -> int",
+  "Kind": "function",
+  "Doc": "Volume général actuel (0–100 %)."
+ },
+ {
+  "Name": "aka.mkdir",
+  "Signature": "aka.mkdir(path) -> bool",
+  "Kind": "function",
+  "Doc": "Crée un répertoire sur la carte SD. True si créé ou déjà présent."
  }
 ]
