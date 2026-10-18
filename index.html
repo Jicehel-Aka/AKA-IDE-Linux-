@@ -1,19 +1,636 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AKA-IDE-Linux Studio & Analyseur ZIP</title>
-    <meta name="description" content="Analyseur de projet, audit de code, vérification de documentation et optimisation structurelle pour AKA-IDE-Linux avec support ZIP" />
-    <meta property="og:title" content="AKA-IDE-Linux Studio & Analyseur ZIP" />
-    <meta property="og:description" content="Analyseur de projet, audit de code, vérification de documentation et optimisation structurelle pour AKA-IDE-Linux avec support ZIP" />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <script type="module" crossorigin src="./assets/index-BtyplEA0.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CKJlKxye.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
-</html>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Studio Blockly AKA</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Layout : colonne pleine hauteur ; en-tête collant ; corps = atelier Blockly (gauche) + panneau Code/Tuto (droite), empilé sous 860px. */
+  :root{
+    --bg:#eef1f8; --panel:#ffffff; --panel-2:#f5f7fc; --fg:#1d2330; --muted:#59627a;
+    --line:#d7dcea; --accent:#2f6df6; --accent-fg:#ffffff; --good:#15935f; --warn:#c2410c;
+    --code-bg:#0b0f19; --code-fg:#e6edf7; --radius:12px;
+    --display:"Fredoka","Trebuchet MS",sans-serif;
+    --body:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0a0e17; --panel:#121a2b; --panel-2:#0f1626; --fg:#e8edf7; --muted:#97a2bb;
+    --line:#243049; --accent:#6a97ff; --accent-fg:#06101f; --good:#38c48b; --warn:#f0894f;
+    --code-bg:#070b13; --code-fg:#e6edf7; color-scheme:dark;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0a0e17; --panel:#121a2b; --panel-2:#0f1626; --fg:#e8edf7; --muted:#97a2bb;
+    --line:#243049; --accent:#6a97ff; --accent-fg:#06101f; --good:#38c48b; --warn:#f0894f;
+    --code-bg:#070b13; --code-fg:#e6edf7; color-scheme:dark;
+  }
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--fg);font-family:var(--body);margin:0}
+  *{box-sizing:border-box}
+  #app{display:flex;flex-direction:column;height:100%}
 
+  header{
+    position:sticky;top:env(safe-area-inset-top,0px);z-index:10;
+    background:var(--panel);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding-block:10px;
+    padding-left:max(16px,env(safe-area-inset-left,0px));
+    padding-right:max(16px,env(safe-area-inset-right,0px));
+  }
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--panel);z-index:10}
+  .brand{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
+  .brand .logo{font-size:22px;line-height:1}
+  .brand h1{font-family:var(--display);font-weight:700;font-size:18px;margin:0;letter-spacing:.2px;white-space:nowrap}
+  .brand small{display:block;color:var(--muted);font-size:11px;font-weight:600}
+  .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--panel-2)}
+  .seg button{border:0;background:transparent;color:var(--muted);font-family:var(--body);font-weight:700;
+    font-size:12px;padding:7px 14px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+  .btn{border:1px solid var(--line);background:var(--panel-2);color:var(--fg);font-family:var(--body);
+    font-weight:600;font-size:12px;padding:7px 12px;border-radius:9px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent}
+  .btn:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 380px;gap:0}
+  #blocklyArea{position:relative;min-width:0;min-height:0;background:var(--code-bg)}
+  #blocklyDiv{position:absolute;inset:0}
+
+  aside{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--panel);
+    border-left:1px solid var(--line)}
+  .tabs{display:flex;gap:4px;padding:8px 10px 0;border-bottom:1px solid var(--line)}
+  .tabs button{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);
+    font-family:var(--body);font-weight:700;font-size:13px;padding:8px 10px;cursor:pointer}
+  .tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+  .pane{flex:1;min-height:0;overflow:auto;
+    padding-block:14px;
+    padding-left:max(16px,env(safe-area-inset-left,0px));
+    padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .pane[hidden]{display:none}
+
+  .code-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .code-head span{font-size:12px;color:var(--muted);font-weight:600}
+  .langpick{display:inline-flex;gap:14px;align-items:center}
+  .langpick label{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:700;color:var(--fg);cursor:pointer}
+  .langpick input{accent-color:var(--accent);width:15px;height:15px}
+  .codeblock{margin-bottom:14px}
+  .codeblock[hidden]{display:none}
+  pre#code{margin:0;background:var(--code-bg);color:var(--code-fg);border-radius:var(--radius);
+    padding:14px;font-family:var(--mono);font-size:12.5px;line-height:1.55;overflow:auto;white-space:pre;
+    border:1px solid var(--line);min-height:120px}
+
+  .tuto-title{font-family:var(--display);font-weight:700;font-size:16px;margin:0 0 2px}
+  .tuto-sub{color:var(--muted);font-size:12px;margin:0 0 12px}
+  ol.steps{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px}
+  ol.steps li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);
+    border-radius:10px;background:var(--panel-2);font-size:13px;line-height:1.45}
+  ol.steps li .num{flex:0 0 22px;height:22px;border-radius:50%;display:grid;place-items:center;
+    font-family:var(--mono);font-size:11px;font-weight:600;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+  ol.steps li.current{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent)}
+  ol.steps li.current .num{background:var(--accent);color:var(--accent-fg);border-color:transparent}
+  ol.steps li.done .num{background:var(--good);color:#fff;border-color:transparent}
+  ol.steps li.done{opacity:.7}
+  .hint{font-size:12px;color:var(--muted);margin:2px 0 12px;padding-left:2px}
+  .hint b{color:var(--fg)}
+  .verdict{font-weight:600;font-size:13px;margin:0 0 12px;min-height:1.2em}
+  .verdict.ok{color:var(--good)} .verdict.no{color:var(--warn)}
+  .tuto-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .foot-note{color:var(--muted);font-size:11.5px;line-height:1.5;margin-top:14px;border-top:1px dashed var(--line);padding-top:10px}
+
+  /* Modale intégrée (remplace prompt/confirm/alert, bloqués dans l'artifact) */
+  .modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(5,9,18,.55);padding:16px}
+  .modal[hidden]{display:none}
+  .modal-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;max-width:380px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.45)}
+  .modal-msg{margin:0 0 12px;font-size:14px;font-weight:600;line-height:1.4}
+  .modal-input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);color:var(--fg);font-family:var(--body);font-size:14px;margin-bottom:14px}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px}
+
+  @media (max-width:860px){
+    main{grid-template-columns:1fr;grid-template-rows:auto auto}
+    #blocklyArea{height:58vh}
+    aside{border-left:0;border-top:1px solid var(--line)}
+  }
+</style>
+
+<div id="app">
+  <header>
+    <div class="brand">
+      <span class="logo" aria-hidden="true">🧱</span>
+      <div>
+        <h1>Studio Blockly AKA</h1>
+        <small>Blocs → code <b>aka</b> (Python) &amp; Love2D (Lua)</small>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="langpick" role="group" aria-label="Langages affichés">
+        <label><input type="checkbox" id="showPy" checked> MicroPython</label>
+        <label><input type="checkbox" id="showLua"> Love2D</label>
+      </div>
+      <button class="btn" id="importBtn" title="Importer un tutoriel au format JSON">📥 Importer un tuto</button>
+      <button class="btn" id="clearBtn" title="Vider l'atelier">🗑 Effacer</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </div>
+  </header>
+
+  <main>
+    <div id="blocklyArea"><div id="blocklyDiv"></div></div>
+    <aside>
+      <div class="tabs" role="tablist">
+        <button id="tabCode" role="tab" aria-selected="true">Code</button>
+        <button id="tabTuto" role="tab" aria-selected="false">Tutoriel</button>
+      </div>
+
+      <section class="pane" id="paneCode" role="tabpanel">
+        <p class="verdict" id="noLang" hidden>Coche MicroPython et/ou Love2D pour afficher le code.</p>
+        <div class="codeblock" id="blockPy">
+          <div class="code-head"><span>main.py — MicroPython AKA</span>
+            <button class="btn" data-copy="codePy">Copier</button></div>
+          <pre id="codePy" tabindex="0">… assemble des blocs pour voir le code …</pre>
+        </div>
+        <div class="codeblock" id="blockLua" hidden>
+          <div class="code-head"><span>main.lua — Love2D (akalove)</span>
+            <button class="btn" data-copy="codeLua">Copier</button></div>
+          <pre id="codeLua" tabindex="0">… assemble des blocs pour voir le code …</pre>
+        </div>
+        <p class="foot-note">Le code utilise la <b>vraie API</b> de la console : module <code>aka</code> en MicroPython,
+        <code>love.graphics</code>/<code>love.keyboard</code> en Lua (Love2D). Colle-le dans l'éditeur de scripts de
+        l'IDE pour le tester au simulateur ou l'envoyer sur la carte.</p>
+      </section>
+
+      <section class="pane" id="paneTuto" role="tabpanel" hidden>
+        <h2 class="tuto-title" id="tutoTitle">—</h2>
+        <p class="tuto-sub" id="tutoSub">—</p>
+        <ol class="steps" id="steps"></ol>
+        <p class="hint" id="hint"></p>
+        <p class="verdict" id="verdict" aria-live="polite"></p>
+        <div class="tuto-actions">
+          <button class="btn primary" id="checkBtn">✓ Vérifier l'étape</button>
+          <button class="btn" id="resetTuto">↺ Recommencer</button>
+        </div>
+        <p class="foot-note">Importe tes propres parcours : un fichier <code>.json</code> avec
+        <code>{ "title", "steps:[{ instruction, hint, requireBlock }] }</code>. Chaque étape est validée
+        quand le bloc demandé est présent dans l'atelier.</p>
+      </section>
+    </aside>
+  </main>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalMsg">
+      <p class="modal-msg" id="modalMsg"></p>
+      <input class="modal-input" id="modalInput" type="text" hidden>
+      <div class="modal-actions">
+        <button class="btn" id="modalCancel">Annuler</button>
+        <button class="btn primary" id="modalOk">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/blockly@11.1.1/blockly.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  if(typeof Blockly==="undefined"){
+    var ce=document.getElementById("codePy"); if(ce) ce.textContent="Blockly n'a pas pu se charger (réseau).";
+    return;
+  }
+  var defineBlocks = (Blockly.common&&Blockly.common.defineBlocksWithJsonArray)||Blockly.defineBlocksWithJsonArray;
+
+  // ---- Modale intégrée : remplace prompt/confirm/alert ---------------------
+  // Dans un artifact, window.prompt()/confirm() sont neutralisés, ce qui cassait
+  // « Créer une variable » (Blockly passe par prompt). On branche nos propres
+  // dialogues via Blockly.dialog.* pour que création/renommage fonctionnent.
+  (function(){
+    var modal=document.getElementById("modal"),msg=document.getElementById("modalMsg"),
+        input=document.getElementById("modalInput"),ok=document.getElementById("modalOk"),
+        cancel=document.getElementById("modalCancel"),mode="prompt",cb=null;
+    function open(m,message,def,callback){
+      mode=m;cb=callback;msg.textContent=message;
+      input.hidden=(m!=="prompt"); cancel.hidden=(m==="alert");
+      if(m==="prompt"){input.value=def==null?"":String(def);}
+      modal.hidden=false;
+      setTimeout(function(){(m==="prompt"?input:ok).focus();if(m==="prompt")input.select();},0);
+    }
+    function close(confirmed){
+      modal.hidden=true;var c=cb;cb=null;if(!c)return;
+      if(mode==="prompt")c(confirmed===false?null:input.value);
+      else if(mode==="confirm")c(confirmed===true);
+      else c();
+    }
+    ok.onclick=function(){close(mode==="confirm"?true:undefined);};
+    cancel.onclick=function(){close(false);};
+    input.addEventListener("keydown",function(e){
+      if(e.key==="Enter"){e.preventDefault();close();}
+      else if(e.key==="Escape"){e.preventDefault();close(false);}
+    });
+    modal.addEventListener("click",function(e){if(e.target===modal)close(false);});
+    if(Blockly.dialog){
+      Blockly.dialog.setPrompt(function(message,def,callback){open("prompt",message,def,callback);});
+      Blockly.dialog.setConfirm(function(message,callback){open("confirm",message,null,callback);});
+      Blockly.dialog.setAlert(function(message,callback){open("alert",message,null,function(){if(callback)callback();});});
+    }
+  })();
+
+  // ---- Définition des blocs AKA -------------------------------------------
+  var C_SCREEN=210, C_DRAW=160, C_INPUT=50, C_VALUE=120, C_FILE=30, C_SYS=330, C_SOUND=90;
+  defineBlocks([
+    {type:"aka_update_loop",message0:"répéter chaque frame %1 %2",
+     args0:[{type:"input_dummy"},{type:"input_statement",name:"DO"}],
+     colour:C_SCREEN,tooltip:"Boucle de jeu : s'exécute ~60 fois par seconde."},
+    {type:"aka_clear",message0:"effacer l'écran",previousStatement:null,nextStatement:null,
+     colour:C_SCREEN,tooltip:"Efface l'écran (noir)."},
+    {type:"aka_set_color",message0:"couleur R %1 V %2 B %3",
+     args0:[{type:"field_number",name:"R",value:255,min:0,max:255},
+            {type:"field_number",name:"G",value:255,min:0,max:255},
+            {type:"field_number",name:"B",value:255,min:0,max:255}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_DRAW,tooltip:"Définit la couleur de dessin (0–255)."},
+    {type:"aka_fill_rect",message0:"rectangle plein x %1 y %2 larg %3 haut %4",
+     args0:[{type:"input_value",name:"X",check:"Number"},{type:"input_value",name:"Y",check:"Number"},
+            {type:"input_value",name:"W",check:"Number"},{type:"input_value",name:"H",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_DRAW},
+    {type:"aka_fill_circle",message0:"cercle plein x %1 y %2 rayon %3",
+     args0:[{type:"input_value",name:"X",check:"Number"},{type:"input_value",name:"Y",check:"Number"},
+            {type:"input_value",name:"R",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_DRAW},
+    {type:"aka_text",message0:"texte %1 en x %2 y %3",
+     args0:[{type:"field_input",name:"TXT",text:"Score"},
+            {type:"input_value",name:"X",check:"Number"},{type:"input_value",name:"Y",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_DRAW},
+    {type:"aka_pixel",message0:"pixel x %1 y %2",
+     args0:[{type:"input_value",name:"X",check:"Number"},{type:"input_value",name:"Y",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_DRAW},
+    {type:"aka_line",message0:"ligne x1 %1 y1 %2 x2 %3 y2 %4",
+     args0:[{type:"input_value",name:"X1",check:"Number"},{type:"input_value",name:"Y1",check:"Number"},
+            {type:"input_value",name:"X2",check:"Number"},{type:"input_value",name:"Y2",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_DRAW},
+    {type:"aka_rect",message0:"rectangle contour x %1 y %2 larg %3 haut %4",
+     args0:[{type:"input_value",name:"X",check:"Number"},{type:"input_value",name:"Y",check:"Number"},
+            {type:"input_value",name:"W",check:"Number"},{type:"input_value",name:"H",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_DRAW},
+    {type:"aka_circle",message0:"cercle contour x %1 y %2 rayon %3",
+     args0:[{type:"input_value",name:"X",check:"Number"},{type:"input_value",name:"Y",check:"Number"},
+            {type:"input_value",name:"R",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_DRAW},
+    {type:"aka_button",message0:"bouton %1 %2",
+     args0:[{type:"field_dropdown",name:"BTN",options:[["A","A"],["B","B"],["C","C"],["D","D"],
+            ["Haut","UP"],["Bas","DOWN"],["Gauche","LEFT"],["Droite","RIGHT"],
+            ["Menu","MENU"],["Run","RUN"],["L1","L1"],["R1","R1"]]},
+            {type:"field_dropdown",name:"MODE",options:[["enfoncé","pressed"],["maintenu","held"],["relâché","released"]]}],
+     output:"Boolean",inputsInline:true,colour:C_INPUT,
+     tooltip:"« enfoncé » = au moment de l'appui (front) ; « maintenu » = tant que pressé ; « relâché » = au moment du relâcher."},
+    {type:"aka_joystick",message0:"manette axe %1",
+     args0:[{type:"field_dropdown",name:"AXE",options:[["X","0"],["Y","1"]]}],
+     output:"Number",colour:C_INPUT,tooltip:"Position de la manette analogique sur l'axe choisi."},
+    {type:"aka_vibrate",message0:"vibrer %1 ms",
+     args0:[{type:"input_value",name:"MS",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_INPUT},
+    {type:"aka_display",message0:"afficher l'image",previousStatement:null,nextStatement:null,
+     colour:C_SCREEN,tooltip:"Pousse le dessin à l'écran."},
+    {type:"aka_sleep_ms",message0:"pause %1 ms",
+     args0:[{type:"input_value",name:"MS",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_SCREEN},
+    {type:"aka_ticks_ms",message0:"temps écoulé (ms)",output:"Number",colour:C_VALUE,
+     tooltip:"Millisecondes depuis le démarrage."},
+    {type:"aka_screenshot",message0:"capture d'écran",previousStatement:null,nextStatement:null,
+     colour:C_SYS,tooltip:"Enregistre une capture de l'écran courant sur la carte SD."},
+    {type:"aka_file_exists",message0:"fichier %1 existe",
+     args0:[{type:"input_value",name:"PATH",check:"String"}],output:"Boolean",inputsInline:true,colour:C_FILE,
+     tooltip:"Vrai si le fichier existe (il est lu pour le vérifier)."},
+    {type:"aka_file_read",message0:"lire le fichier %1",
+     args0:[{type:"input_value",name:"PATH",check:"String"}],output:"String",inputsInline:true,colour:C_FILE,
+     tooltip:"Contenu texte du fichier, ou texte vide s'il n'existe pas."},
+    {type:"aka_file_write",message0:"écrire %1 dans le fichier %2",
+     args0:[{type:"input_value",name:"DATA",check:"String"},{type:"input_value",name:"PATH",check:"String"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_FILE,tooltip:"Enregistre le texte dans le fichier."},
+    {type:"aka_list_py",message0:"liste des .py du dossier %1",
+     args0:[{type:"input_value",name:"DIR",check:"String"}],output:"Array",inputsInline:true,colour:C_FILE},
+    {type:"aka_mkdir",message0:"créer le dossier %1",
+     args0:[{type:"input_value",name:"PATH",check:"String"}],inputsInline:true,
+     previousStatement:null,nextStatement:null,colour:C_FILE},
+    {type:"aka_set_brightness",message0:"régler luminosité %1 %",
+     args0:[{type:"input_value",name:"P",check:"Number"}],inputsInline:true,
+     previousStatement:null,nextStatement:null,colour:C_SYS},
+    {type:"aka_battery",message0:"niveau batterie (%)",output:"Number",colour:C_SYS},
+    {type:"aka_power_off",message0:"éteindre la console",previousStatement:null,nextStatement:null,colour:C_SYS},
+    {type:"aka_loader",message0:"retour au loader",previousStatement:null,nextStatement:null,colour:C_SYS},
+    {type:"aka_tone",message0:"jouer son %1 Hz pendant %2 ms",
+     args0:[{type:"input_value",name:"FREQ",check:"Number"},{type:"input_value",name:"MS",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_SOUND},
+    {type:"aka_no_tone",message0:"couper le son",previousStatement:null,nextStatement:null,colour:C_SOUND},
+    {type:"aka_set_volume",message0:"régler volume %1 %",
+     args0:[{type:"input_value",name:"P",check:"Number"}],inputsInline:true,
+     previousStatement:null,nextStatement:null,colour:C_SOUND},
+    {type:"aka_width",message0:"largeur écran",output:"Number",colour:C_VALUE},
+    {type:"aka_height",message0:"hauteur écran",output:"Number",colour:C_VALUE}
+  ]);
+
+  // ---- Générateurs ---------------------------------------------------------
+  var py=Blockly.Python, lua=Blockly.Lua;
+  function num(gen,block,name,order){ return gen.valueToCode(block,name,order)|| "0"; }
+  function val(gen,block,name,order,def){ return gen.valueToCode(block,name,order)|| def; }
+
+  if(py){
+    var PA=py.ORDER_ATOMIC!=null?py.ORDER_ATOMIC:0, PN=py.ORDER_NONE!=null?py.ORDER_NONE:99;
+    var pf=py.forBlock||py;
+    pf["aka_update_loop"]=function(b){var body=py.statementToCode(b,"DO");return "import aka\n\nwhile aka.update():\n"+(body||(py.INDENT+"pass\n"));};
+    pf["aka_clear"]=function(){return "aka.clear()\n";};
+    pf["aka_set_color"]=function(b){return "aka.set_color("+b.getFieldValue("R")+", "+b.getFieldValue("G")+", "+b.getFieldValue("B")+")\n";};
+    pf["aka_fill_rect"]=function(b){return "aka.fill_rect("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+", "+num(py,b,"W",PA)+", "+num(py,b,"H",PA)+")\n";};
+    pf["aka_fill_circle"]=function(b){return "aka.fill_circle("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+", "+num(py,b,"R",PA)+")\n";};
+    pf["aka_text"]=function(b){return "aka.text("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+", "+py.quote_(b.getFieldValue("TXT"))+")\n";};
+    pf["aka_pixel"]=function(b){return "aka.pixel("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+")\n";};
+    pf["aka_line"]=function(b){return "aka.line("+num(py,b,"X1",PA)+", "+num(py,b,"Y1",PA)+", "+num(py,b,"X2",PA)+", "+num(py,b,"Y2",PA)+")\n";};
+    pf["aka_rect"]=function(b){return "aka.rect("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+", "+num(py,b,"W",PA)+", "+num(py,b,"H",PA)+")\n";};
+    pf["aka_circle"]=function(b){return "aka.circle("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+", "+num(py,b,"R",PA)+")\n";};
+    pf["aka_button"]=function(b){var m=b.getFieldValue("MODE"),fn=m==="held"?"buttons":(m==="released"?"released":"pressed");
+      return ["(aka."+fn+"() & aka."+b.getFieldValue("BTN")+") != 0",PN];};
+    pf["aka_joystick"]=function(b){return ["aka.joystick()["+b.getFieldValue("AXE")+"]",PA];};
+    pf["aka_vibrate"]=function(b){return "aka.vibrate("+num(py,b,"MS",PA)+")\n";};
+    pf["aka_display"]=function(){return "aka.display()\n";};
+    pf["aka_sleep_ms"]=function(b){return "aka.sleep_ms("+num(py,b,"MS",PA)+")\n";};
+    pf["aka_ticks_ms"]=function(){return ["aka.ticks_ms()",PA];};
+    pf["aka_screenshot"]=function(){return "aka.screenshot()\n";};
+    pf["aka_file_exists"]=function(b){return ["(aka.file_read("+val(py,b,"PATH",PA,'""')+") is not None)",PN];};
+    pf["aka_file_read"]=function(b){return ["((aka.file_read("+val(py,b,"PATH",PA,'""')+") or b'').decode())",PA];};
+    pf["aka_file_write"]=function(b){return "aka.file_write("+val(py,b,"PATH",PA,'""')+", "+val(py,b,"DATA",PA,'""')+")\n";};
+    pf["aka_list_py"]=function(b){return ["aka.list_py("+val(py,b,"DIR",PA,'""')+")",PA];};
+    pf["aka_mkdir"]=function(b){return "aka.mkdir("+val(py,b,"PATH",PA,'""')+")\n";};
+    pf["aka_set_brightness"]=function(b){return "aka.set_brightness("+num(py,b,"P",PA)+")\n";};
+    pf["aka_battery"]=function(){return ["aka.battery()",PA];};
+    pf["aka_power_off"]=function(){return "aka.power_off()\n";};
+    pf["aka_loader"]=function(){return "aka.loader()\n";};
+    pf["aka_tone"]=function(b){return "aka.tone("+num(py,b,"FREQ",PA)+", "+num(py,b,"MS",PA)+")\n";};
+    pf["aka_no_tone"]=function(){return "aka.no_tone()\n";};
+    pf["aka_set_volume"]=function(b){return "aka.set_volume("+num(py,b,"P",PA)+")\n";};
+    pf["aka_width"]=function(){return ["aka.width()",PA];};
+    pf["aka_height"]=function(){return ["aka.height()",PA];};
+  }
+  if(lua){
+    var LA=lua.ORDER_ATOMIC!=null?lua.ORDER_ATOMIC:0, LN=lua.ORDER_NONE!=null?lua.ORDER_NONE:99;
+    var lf=lua.forBlock||lua;
+    var keymap={A:"x",B:"c",C:"v",D:"b",UP:"up",DOWN:"down",LEFT:"left",RIGHT:"right",MENU:"escape",RUN:"return",L1:"q",R1:"e"};
+    lf["aka_update_loop"]=function(b){var body=lua.statementToCode(b,"DO");return "function love.draw()\n"+(body||"")+"end\n";};
+    lf["aka_clear"]=function(){return "love.graphics.clear()\n";};
+    lf["aka_set_color"]=function(b){var r=(b.getFieldValue("R")/255).toFixed(3),g=(b.getFieldValue("G")/255).toFixed(3),bl=(b.getFieldValue("B")/255).toFixed(3);return "love.graphics.setColor("+r+", "+g+", "+bl+")\n";};
+    lf["aka_fill_rect"]=function(b){return 'love.graphics.rectangle("fill", '+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+", "+num(lua,b,"W",LA)+", "+num(lua,b,"H",LA)+")\n";};
+    lf["aka_fill_circle"]=function(b){return 'love.graphics.circle("fill", '+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+", "+num(lua,b,"R",LA)+")\n";};
+    lf["aka_text"]=function(b){return "love.graphics.print("+lua.quote_(b.getFieldValue("TXT"))+", "+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+")\n";};
+    lf["aka_pixel"]=function(b){return "love.graphics.points("+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+")\n";};
+    lf["aka_line"]=function(b){return "love.graphics.line("+num(lua,b,"X1",LA)+", "+num(lua,b,"Y1",LA)+", "+num(lua,b,"X2",LA)+", "+num(lua,b,"Y2",LA)+")\n";};
+    lf["aka_rect"]=function(b){return 'love.graphics.rectangle("line", '+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+", "+num(lua,b,"W",LA)+", "+num(lua,b,"H",LA)+")\n";};
+    lf["aka_circle"]=function(b){return 'love.graphics.circle("line", '+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+", "+num(lua,b,"R",LA)+")\n";};
+    lf["aka_button"]=function(b){var key=keymap[b.getFieldValue("BTN")]||"x",m=b.getFieldValue("MODE");
+      if(m==="released") return ['(not love.keyboard.isDown("'+key+'"))',LN];
+      return ['love.keyboard.isDown("'+key+'")',LN];}; // enfoncé/maintenu ≈ isDown (les fronts exacts passent par love.keypressed)
+    lf["aka_joystick"]=function(b){var ax=b.getFieldValue("AXE");
+      var neg=ax==="0"?"left":"up", pos=ax==="0"?"right":"down";
+      return ['((love.keyboard.isDown("'+pos+'") and 1 or 0) - (love.keyboard.isDown("'+neg+'") and 1 or 0))',LA];};
+    lf["aka_vibrate"]=function(){return "-- vibreur non disponible en Love2D\n";};
+    lf["aka_display"]=function(){return "-- (l'affichage se fait automatiquement dans love.draw)\n";};
+    lf["aka_sleep_ms"]=function(b){return "love.timer.sleep(("+num(lua,b,"MS",LA)+") / 1000)\n";};
+    lf["aka_ticks_ms"]=function(){return ["(love.timer.getTime() * 1000)",LA];};
+    lf["aka_screenshot"]=function(){return 'love.graphics.captureScreenshot("screenshot.png")\n';};
+    lf["aka_file_exists"]=function(b){return ["(love.filesystem.getInfo("+val(lua,b,"PATH",LA,'""')+") ~= nil)",LN];};
+    lf["aka_file_read"]=function(b){return ["(love.filesystem.read("+val(lua,b,"PATH",LA,'""')+") or \"\")",LA];};
+    lf["aka_file_write"]=function(b){return "love.filesystem.write("+val(lua,b,"PATH",LA,'""')+", "+val(lua,b,"DATA",LA,'""')+")\n";};
+    lf["aka_list_py"]=function(b){return ["love.filesystem.getDirectoryItems("+val(lua,b,"DIR",LA,'""')+")",LA];};
+    lf["aka_mkdir"]=function(b){return "love.filesystem.createDirectory("+val(lua,b,"PATH",LA,'""')+")\n";};
+    lf["aka_set_brightness"]=function(){return "-- luminosité d'écran non disponible en Love2D\n";};
+    lf["aka_battery"]=function(){return ["(select(2, love.system.getPowerInfo()) or 100)",LA];};
+    lf["aka_power_off"]=function(){return "love.event.quit()\n";};
+    lf["aka_loader"]=function(){return "love.event.quit()\n";};
+    lf["aka_tone"]=function(){return "-- tone : créez une source audio avec love.audio\n";};
+    lf["aka_no_tone"]=function(){return "love.audio.stop()\n";};
+    lf["aka_set_volume"]=function(b){return "love.audio.setVolume(("+num(lua,b,"P",LA)+") / 100)\n";};
+    lf["aka_width"]=function(){return ["love.graphics.getWidth()",LA];};
+    lf["aka_height"]=function(){return ["love.graphics.getHeight()",LA];};
+  }
+
+  // ---- Boîte à outils (avec valeurs par défaut en « ombres ») --------------
+  function shadowNum(v){return {shadow:{type:"math_number",fields:{NUM:v}}};}
+  function shadowTxt(t){return {shadow:{type:"text",fields:{TEXT:t}}};}
+  var toolbox={kind:"categoryToolbox",contents:[
+    {kind:"category",name:"Écran",colour:C_SCREEN,contents:[
+      {kind:"block",type:"aka_update_loop"},{kind:"block",type:"aka_clear"},
+      {kind:"block",type:"aka_display"},
+      {kind:"block",type:"aka_sleep_ms",inputs:{MS:shadowNum(100)}}]},
+    {kind:"category",name:"Dessin",colour:C_DRAW,contents:[
+      {kind:"block",type:"aka_set_color"},
+      {kind:"block",type:"aka_fill_rect",inputs:{X:shadowNum(140),Y:shadowNum(110),W:shadowNum(40),H:shadowNum(20)}},
+      {kind:"block",type:"aka_rect",inputs:{X:shadowNum(140),Y:shadowNum(110),W:shadowNum(40),H:shadowNum(20)}},
+      {kind:"block",type:"aka_fill_circle",inputs:{X:shadowNum(160),Y:shadowNum(120),R:shadowNum(16)}},
+      {kind:"block",type:"aka_circle",inputs:{X:shadowNum(160),Y:shadowNum(120),R:shadowNum(16)}},
+      {kind:"block",type:"aka_line",inputs:{X1:shadowNum(0),Y1:shadowNum(0),X2:shadowNum(100),Y2:shadowNum(80)}},
+      {kind:"block",type:"aka_pixel",inputs:{X:shadowNum(10),Y:shadowNum(10)}},
+      {kind:"block",type:"aka_text",inputs:{X:shadowNum(8),Y:shadowNum(8)}}]},
+    {kind:"category",name:"Entrées",colour:C_INPUT,contents:[
+      {kind:"block",type:"aka_button"},{kind:"block",type:"aka_joystick"},
+      {kind:"block",type:"aka_vibrate",inputs:{MS:shadowNum(120)}}]},
+    {kind:"category",name:"Valeurs",colour:C_VALUE,contents:[
+      {kind:"block",type:"aka_width"},{kind:"block",type:"aka_height"},{kind:"block",type:"aka_ticks_ms"},
+      {kind:"block",type:"math_number"},
+      {kind:"block",type:"math_arithmetic",inputs:{A:shadowNum(1),B:shadowNum(1)}},
+      {kind:"block",type:"math_random_int",inputs:{FROM:shadowNum(1),TO:shadowNum(100)}},
+      {kind:"block",type:"math_modulo",inputs:{DIVIDEND:shadowNum(10),DIVISOR:shadowNum(3)}}]},
+    {kind:"category",name:"Logique",colour:"#5b80a5",contents:[
+      {kind:"block",type:"controls_if"},{kind:"block",type:"logic_compare"},
+      {kind:"block",type:"logic_operation"},{kind:"block",type:"logic_negate"},
+      {kind:"block",type:"logic_boolean"}]},
+    {kind:"category",name:"Boucles",colour:"#5ba55b",contents:[
+      {kind:"block",type:"controls_repeat_ext",inputs:{TIMES:shadowNum(10)}},
+      {kind:"block",type:"controls_whileUntil"},
+      {kind:"block",type:"controls_for",inputs:{FROM:shadowNum(1),TO:shadowNum(10),BY:shadowNum(1)}}]},
+    {kind:"category",name:"Texte",colour:"#a5745b",contents:[
+      {kind:"block",type:"text",fields:{TEXT:"texte"}},
+      {kind:"block",type:"text_join",inputs:{ADD0:shadowTxt("Score: "),ADD1:shadowTxt("0")}}]},
+    {kind:"category",name:"Son & Musique",colour:C_SOUND,contents:[
+      {kind:"block",type:"aka_tone",inputs:{FREQ:shadowNum(440),MS:shadowNum(200)}},
+      {kind:"block",type:"aka_no_tone"},
+      {kind:"block",type:"aka_set_volume",inputs:{P:shadowNum(80)}}]},
+    {kind:"category",name:"Fichiers / SD",colour:C_FILE,contents:[
+      {kind:"block",type:"aka_file_exists",inputs:{PATH:shadowTxt("/data/score.txt")}},
+      {kind:"block",type:"aka_file_read",inputs:{PATH:shadowTxt("/data/score.txt")}},
+      {kind:"block",type:"aka_file_write",inputs:{DATA:shadowTxt("0"),PATH:shadowTxt("/data/score.txt")}},
+      {kind:"block",type:"aka_mkdir",inputs:{PATH:shadowTxt("/data")}},
+      {kind:"block",type:"aka_list_py",inputs:{DIR:shadowTxt("/py")}}]},
+    {kind:"category",name:"Système & Flash",colour:C_SYS,contents:[
+      {kind:"block",type:"aka_set_brightness",inputs:{P:shadowNum(80)}},
+      {kind:"block",type:"aka_battery"},
+      {kind:"block",type:"aka_screenshot"},
+      {kind:"block",type:"aka_power_off"},
+      {kind:"block",type:"aka_loader"}]},
+    {kind:"category",name:"Variables",custom:"VARIABLE",colour:"#a55b80"},
+    {kind:"category",name:"Fonctions",custom:"PROCEDURE",colour:"#995ba5"}
+  ]};
+
+  // ---- Thème sombre --------------------------------------------------------
+  var theme=Blockly.Theme.defineTheme("akaDark",{
+    base:Blockly.Themes.Classic,
+    componentStyles:{
+      workspaceBackgroundColour:"#0b0f19",toolboxBackgroundColour:"#0f172a",
+      toolboxForegroundColour:"#e8edf7",flyoutBackgroundColour:"#131a2b",
+      flyoutForegroundColour:"#cdd6ea",flyoutOpacity:.98,scrollbarColour:"#475569",
+      insertionMarkerColour:"#6a97ff",insertionMarkerOpacity:.4,cursorColour:"#6a97ff",
+      selectedGlowColour:"#6a97ff"
+    }
+  });
+
+  // ---- Injection + dimensionnement (le point clé) --------------------------
+  var blocklyDiv=document.getElementById("blocklyDiv");
+  var ws=Blockly.inject(blocklyDiv,{
+    toolbox:toolbox,theme:theme,renderer:"zelos",trashcan:true,
+    grid:{spacing:24,length:3,colour:"#1b2436",snap:true},
+    zoom:{controls:true,wheel:true,startScale:.95,maxScale:2,minScale:.4,scaleSpeed:1.1},
+    move:{scrollbars:true,drag:true,wheel:true}
+  });
+  function resize(){ if(ws) Blockly.svgResize(ws); }
+  var ro=new ResizeObserver(resize); ro.observe(document.getElementById("blocklyArea"));
+  window.addEventListener("resize",resize);
+  requestAnimationFrame(function(){requestAnimationFrame(resize);});
+
+  // ---- Génération de code en direct (MicroPython et/ou Love2D) -------------
+  var showPy=document.getElementById("showPy"), showLua=document.getElementById("showLua");
+  var blockPy=document.getElementById("blockPy"), blockLua=document.getElementById("blockLua");
+  var codePy=document.getElementById("codePy"), codeLua=document.getElementById("codeLua");
+  var noLang=document.getElementById("noLang");
+  var LKEY="aka-blockly-langs";
+  function gen1(g){
+    if(!g) return "(générateur indisponible)";
+    try{ var c=g.workspaceToCode(ws); return c.trim()?c:"… assemble des blocs pour voir le code …"; }
+    catch(e){ return "// "+e.message; }
+  }
+  function generate(){
+    var p=showPy.checked, l=showLua.checked;
+    blockPy.hidden=!p; blockLua.hidden=!l; noLang.hidden=(p||l);
+    if(p) codePy.textContent=gen1(py);
+    if(l) codeLua.textContent=gen1(lua);
+  }
+  function onLangChange(){
+    try{ localStorage.setItem(LKEY, JSON.stringify({py:showPy.checked,lua:showLua.checked})); }catch(e){}
+    generate();
+  }
+  showPy.addEventListener("change",onLangChange);
+  showLua.addEventListener("change",onLangChange);
+
+  ws.addChangeListener(function(e){
+    if(e.isUiEvent) return;
+    generate(); saveState(); refreshSteps();
+  });
+
+  // ---- Copier (par bloc) ---------------------------------------------------
+  Array.prototype.forEach.call(document.querySelectorAll("[data-copy]"),function(btn){
+    btn.addEventListener("click",function(){
+      var el=document.getElementById(btn.getAttribute("data-copy")); if(!el) return;
+      function done(){var t=btn.textContent;btn.textContent="Copié ✓";setTimeout(function(){btn.textContent=t;},1400);}
+      function sel(){var r=document.createRange();r.selectNodeContents(el);var s=window.getSelection();s.removeAllRanges();s.addRange(r);done();}
+      if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(el.textContent).then(done,sel); } else sel();
+    });
+  });
+
+  // ---- Effacer --------------------------------------------------------------
+  document.getElementById("clearBtn").onclick=function(){ ws.clear(); generate(); };
+
+  // ---- Onglets --------------------------------------------------------------
+  function selectTab(which){
+    var code=which==="code";
+    document.getElementById("tabCode").setAttribute("aria-selected",String(code));
+    document.getElementById("tabTuto").setAttribute("aria-selected",String(!code));
+    document.getElementById("paneCode").hidden=!code;
+    document.getElementById("paneTuto").hidden=code;
+  }
+  document.getElementById("tabCode").onclick=function(){selectTab("code");};
+  document.getElementById("tabTuto").onclick=function(){selectTab("tuto");};
+
+  // ---- Persistance (confort par navigateur) --------------------------------
+  var KEY="aka-blockly-ws";
+  function saveState(){
+    try{ var xml=Blockly.Xml.workspaceToDom(ws);
+      localStorage.setItem(KEY,Blockly.Xml.domToText(xml)); }catch(e){}
+  }
+  function restoreState(){
+    try{ var t=localStorage.getItem(KEY);
+      if(t){ Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(t),ws); return true; } }catch(e){}
+    return false;
+  }
+
+  // ---- Tutoriels ------------------------------------------------------------
+  var tutorial={
+    title:"Pong — les bases",
+    sub:"Pose la boucle de jeu, dessine la raquette et affiche le score.",
+    steps:[
+      {instruction:"Place le bloc « répéter chaque frame » : c'est la boucle de jeu.",hint:"Catégorie <b>Écran</b>.",requireBlock:"aka_update_loop"},
+      {instruction:"Dans la boucle, ajoute « effacer l'écran ».",hint:"Catégorie <b>Écran</b>, à glisser DANS la boucle.",requireBlock:"aka_clear"},
+      {instruction:"Choisis une couleur avec « couleur R V B ».",hint:"Catégorie <b>Dessin</b>.",requireBlock:"aka_set_color"},
+      {instruction:"Dessine la raquette avec « rectangle plein ».",hint:"Catégorie <b>Dessin</b>.",requireBlock:"aka_fill_rect"},
+      {instruction:"Affiche le score avec « texte ».",hint:"Catégorie <b>Dessin</b>.",requireBlock:"aka_text"}
+    ]
+  };
+  var current=0;
+  function stepDone(step){
+    try{ return ws.getBlocksByType(step.requireBlock,false).length>0; }catch(e){ return false; }
+  }
+  function renderTuto(){
+    document.getElementById("tutoTitle").textContent=tutorial.title;
+    document.getElementById("tutoSub").textContent=tutorial.sub||"";
+    var ol=document.getElementById("steps"); ol.innerHTML="";
+    tutorial.steps.forEach(function(s,i){
+      var li=document.createElement("li");
+      var done=stepDone(s);
+      li.className=done?"done":(i===current?"current":"");
+      li.innerHTML='<span class="num">'+(done?"✓":(i+1))+'</span><span>'+s.instruction+'</span>';
+      ol.appendChild(li);
+    });
+    var step=tutorial.steps[current];
+    document.getElementById("hint").innerHTML=step?("💡 "+(step.hint||"")):"";
+  }
+  function refreshSteps(){
+    // avance automatiquement le curseur jusqu'à la 1re étape non faite
+    var i=0; while(i<tutorial.steps.length&&stepDone(tutorial.steps[i])) i++;
+    current=Math.min(i,tutorial.steps.length-1);
+    if(!document.getElementById("paneTuto").hidden) renderTuto();
+  }
+  document.getElementById("checkBtn").onclick=function(){
+    var v=document.getElementById("verdict");
+    var allDone=tutorial.steps.every(stepDone);
+    var step=tutorial.steps[current];
+    if(allDone){ v.className="verdict ok"; v.textContent="🎉 Bravo, tutoriel terminé ! Copie le code et teste-le dans l'IDE."; renderTuto(); return; }
+    if(step&&stepDone(step)){ v.className="verdict ok"; v.textContent="Étape validée ✓"; }
+    else { v.className="verdict no"; v.textContent="Pas encore : "+(step?step.instruction:""); }
+    renderTuto();
+  };
+  document.getElementById("resetTuto").onclick=function(){
+    current=0; document.getElementById("verdict").textContent=""; renderTuto();
+  };
+
+  // ---- Import d'un tutoriel JSON -------------------------------------------
+  var fileInput=document.getElementById("importFile");
+  document.getElementById("importBtn").onclick=function(){ fileInput.click(); };
+  fileInput.onchange=function(){
+    var f=fileInput.files&&fileInput.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      try{
+        var t=JSON.parse(rd.result);
+        if(!t||!Array.isArray(t.steps)||!t.steps.length) throw new Error("format");
+        tutorial={title:t.title||"Tutoriel importé",sub:t.sub||"",steps:t.steps.map(function(s){
+          return {instruction:String(s.instruction||""),hint:s.hint||"",requireBlock:String(s.requireBlock||"")};
+        })};
+        current=0; selectTab("tuto"); refreshSteps();
+        var v=document.getElementById("verdict"); v.className="verdict ok"; v.textContent="Tutoriel « "+tutorial.title+" » importé.";
+      }catch(e){
+        selectTab("tuto");
+        var v=document.getElementById("verdict"); v.className="verdict no";
+        v.textContent="Fichier invalide : attendu { title, steps:[{ instruction, requireBlock }] }.";
+      }
+      fileInput.value="";
+    };
+    rd.readAsText(f);
+  };
+
+  // ---- Démarrage ------------------------------------------------------------
+  restoreState();
+  try{ var lp=JSON.parse(localStorage.getItem(LKEY)||"null"); if(lp){ showPy.checked=!!lp.py; showLua.checked=!!lp.lua; } }catch(e){}
+  generate();
+  renderTuto();
+  resize();
+})();
+</script>
