@@ -164,6 +164,7 @@
         <p class="verdict" id="verdict" aria-live="polite"></p>
         <div class="tuto-actions">
           <button class="btn primary" id="checkBtn">✓ Vérifier l'étape</button>
+          <button class="btn" id="nextTuto" hidden>Tutoriel suivant →</button>
           <button class="btn" id="resetTuto">↺ Recommencer</button>
         </div>
         <p class="foot-note">Importe tes propres parcours : un fichier <code>.json</code> avec
@@ -186,6 +187,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/blockly@11.1.1/blockly.min.js"></script>
+<!-- Les générateurs Python et Lua ne sont PAS inclus dans blockly.min.js (v11) : on les charge à part. -->
+<script src="https://cdn.jsdelivr.net/npm/blockly@11.1.1/python_compressed.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/blockly@11.1.1/lua_compressed.js"></script>
 <script>
 (function(){
   "use strict";
@@ -594,17 +598,42 @@
   }
 
   // ---- Tutoriels ------------------------------------------------------------
-  var tutorial={
-    title:"Pong — les bases",
-    sub:"Pose la boucle de jeu, dessine la raquette et affiche le score.",
-    steps:[
-      {instruction:"Place le bloc « répéter chaque frame » : c'est la boucle de jeu.",hint:"Catégorie <b>Écran</b>.",requireBlock:"aka_update_loop"},
-      {instruction:"Dans la boucle, ajoute « effacer l'écran ».",hint:"Catégorie <b>Écran</b>, à glisser DANS la boucle.",requireBlock:"aka_clear"},
-      {instruction:"Choisis une couleur avec « couleur R V B ».",hint:"Catégorie <b>Dessin</b>.",requireBlock:"aka_set_color"},
-      {instruction:"Dessine la raquette avec « rectangle plein ».",hint:"Catégorie <b>Dessin</b>.",requireBlock:"aka_fill_rect"},
-      {instruction:"Affiche le score avec « texte ».",hint:"Catégorie <b>Dessin</b>.",requireBlock:"aka_text"}
-    ]
-  };
+  // Catalogue de parcours intégrés : on progresse de l'un à l'autre avec « Tutoriel suivant → ».
+  var TUTOS=[
+    {
+      title:"Pong — les bases",
+      sub:"Pose la boucle de jeu, dessine la raquette et affiche le score.",
+      steps:[
+        {instruction:"Place le bloc « répéter chaque frame » : c'est la boucle de jeu.",hint:"Catégorie <b>Écran</b>.",requireBlock:"aka_update_loop"},
+        {instruction:"Dans la boucle, ajoute « effacer l'écran ».",hint:"Catégorie <b>Écran</b>, à glisser DANS la boucle.",requireBlock:"aka_clear"},
+        {instruction:"Choisis une couleur avec « couleur R V B ».",hint:"Catégorie <b>Dessin</b>.",requireBlock:"aka_set_color"},
+        {instruction:"Dessine la raquette avec « rectangle plein ».",hint:"Catégorie <b>Dessin</b>.",requireBlock:"aka_fill_rect"},
+        {instruction:"Affiche le score avec « texte ».",hint:"Catégorie <b>Dessin</b>.",requireBlock:"aka_text"}
+      ]
+    },
+    {
+      title:"Bouger un personnage",
+      sub:"Lis les boutons et déplace un cercle à l'écran.",
+      steps:[
+        {instruction:"Place « répéter chaque frame » puis « effacer l'écran » dedans.",hint:"Catégorie <b>Écran</b>.",requireBlock:"aka_update_loop"},
+        {instruction:"Ajoute un test « si » pour réagir à un bouton.",hint:"Catégorie <b>Logique</b>.",requireBlock:"controls_if"},
+        {instruction:"Teste un bouton avec le bloc « bouton … ».",hint:"Catégorie <b>Entrées</b> (mode enfoncé / maintenu).",requireBlock:"aka_button"},
+        {instruction:"Dessine le personnage avec « cercle plein ».",hint:"Catégorie <b>Dessin</b>.",requireBlock:"aka_fill_circle"}
+      ]
+    },
+    {
+      title:"Faire un son",
+      sub:"Joue une note quand on appuie sur un bouton.",
+      steps:[
+        {instruction:"Place « répéter chaque frame ».",hint:"Catégorie <b>Écran</b>.",requireBlock:"aka_update_loop"},
+        {instruction:"Ajoute un test « si » pour l'appui.",hint:"Catégorie <b>Logique</b>.",requireBlock:"controls_if"},
+        {instruction:"Détecte l'appui avec « bouton … ».",hint:"Catégorie <b>Entrées</b>.",requireBlock:"aka_button"},
+        {instruction:"Joue un son avec « jouer son … ».",hint:"Catégorie <b>Son &amp; Musique</b>.",requireBlock:"aka_tone"}
+      ]
+    }
+  ];
+  var tutoIndex=0;
+  var tutorial=TUTOS[tutoIndex];
   var current=0;
   function stepDone(step){
     try{ return ws.getBlocksByType(step.requireBlock,false).length>0; }catch(e){ return false; }
@@ -622,6 +651,17 @@
     });
     var step=tutorial.steps[current];
     document.getElementById("hint").innerHTML=step?("💡 "+(step.hint||"")):"";
+    // bouton « Tutoriel suivant » : visible seulement si ce tuto est fini et qu'il en reste un.
+    var allDone=tutorial.steps.every(stepDone);
+    document.getElementById("nextTuto").hidden=!(allDone && tutoIndex<TUTOS.length-1);
+  }
+  function loadTuto(i){
+    tutoIndex=Math.max(0,Math.min(i,TUTOS.length-1));
+    tutorial=TUTOS[tutoIndex];
+    current=0; lastDone=countDone();
+    var v=document.getElementById("verdict");
+    v.className="verdict"; v.textContent="Nouveau tutoriel : « "+tutorial.title+" ». "+(tutorial.sub||"");
+    renderTuto();
   }
   var lastDone=0;
   function countDone(){ var d=0; while(d<tutorial.steps.length&&stepDone(tutorial.steps[d])) d++; return d; }
@@ -650,6 +690,7 @@
   document.getElementById("resetTuto").onclick=function(){
     current=0; lastDone=0; document.getElementById("verdict").textContent=""; renderTuto();
   };
+  document.getElementById("nextTuto").onclick=function(){ loadTuto(tutoIndex+1); };
 
   // ---- Import d'un tutoriel JSON -------------------------------------------
   var fileInput=document.getElementById("importFile");
@@ -664,7 +705,7 @@
         tutorial={title:t.title||"Tutoriel importé",sub:t.sub||"",steps:t.steps.map(function(s){
           return {instruction:String(s.instruction||""),hint:s.hint||"",requireBlock:String(s.requireBlock||"")};
         })};
-        current=0; selectTab("tuto"); refreshSteps();
+        tutoIndex=TUTOS.length; current=0; lastDone=0; selectTab("tuto"); refreshSteps();
         var v=document.getElementById("verdict"); v.className="verdict ok"; v.textContent="Tutoriel « "+tutorial.title+" » importé.";
       }catch(e){
         selectTab("tuto");
