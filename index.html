@@ -319,6 +319,27 @@
     {type:"aka_set_volume",message0:"régler volume %1 %",
      args0:[{type:"input_value",name:"P",check:"Number"}],inputsInline:true,
      previousStatement:null,nextStatement:null,colour:C_SOUND},
+    {type:"aka_collide",message0:"collision  A x %1 y %2 l %3 h %4  B x %5 y %6 l %7 h %8",
+     args0:[{type:"input_value",name:"AX",check:"Number"},{type:"input_value",name:"AY",check:"Number"},
+            {type:"input_value",name:"AW",check:"Number"},{type:"input_value",name:"AH",check:"Number"},
+            {type:"input_value",name:"BX",check:"Number"},{type:"input_value",name:"BY",check:"Number"},
+            {type:"input_value",name:"BW",check:"Number"},{type:"input_value",name:"BH",check:"Number"}],
+     output:"Boolean",inputsInline:true,colour:"#5b80a5",
+     tooltip:"Vrai si les deux rectangles (x, y, largeur, hauteur) se chevauchent (AABB)."},
+    {type:"aka_clamp",message0:"borner %1 entre %2 et %3",
+     args0:[{type:"input_value",name:"V",check:"Number"},{type:"input_value",name:"MIN",check:"Number"},
+            {type:"input_value",name:"MAX",check:"Number"}],
+     output:"Number",inputsInline:true,colour:C_VALUE,tooltip:"Garde V dans l'intervalle [min, max]."},
+    {type:"aka_note",message0:"jouer note %1 octave %2 durée %3 ms",
+     args0:[{type:"field_dropdown",name:"NOTE",options:[["Do","0"],["Ré","2"],["Mi","4"],["Fa","5"],["Sol","7"],["La","9"],["Si","11"]]},
+            {type:"field_number",name:"OCT",value:4,min:1,max:8},
+            {type:"input_value",name:"MS",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_SOUND,
+     tooltip:"Joue une note musicale (convertie en fréquence via aka.tone)."},
+    {type:"aka_wait_frames",message0:"attendre %1 images",
+     args0:[{type:"input_value",name:"N",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_SCREEN,
+     tooltip:"Laisse passer N frames (appelle aka.update())."},
     {type:"aka_width",message0:"largeur écran",output:"Number",colour:C_VALUE},
     {type:"aka_height",message0:"hauteur écran",output:"Number",colour:C_VALUE}
   ]);
@@ -327,6 +348,13 @@
   var py=Blockly.Python, lua=Blockly.Lua;
   function num(gen,block,name,order){ return gen.valueToCode(block,name,order)|| "0"; }
   function val(gen,block,name,order,def){ return gen.valueToCode(block,name,order)|| def; }
+  function noteFreq(b){ var semi=parseInt(b.getFieldValue("NOTE"),10)||0, oct=parseInt(b.getFieldValue("OCT"),10)||4;
+    var midi=12*(oct+1)+semi; return Math.round(440*Math.pow(2,(midi-69)/12)); }
+  function collideExpr(gen,b,order){
+    var ax=num(gen,b,"AX",order),ay=num(gen,b,"AY",order),aw=num(gen,b,"AW",order),ah=num(gen,b,"AH",order),
+        bx=num(gen,b,"BX",order),by=num(gen,b,"BY",order),bw=num(gen,b,"BW",order),bh=num(gen,b,"BH",order);
+    return "("+ax+" < "+bx+" + "+bw+" and "+ax+" + "+aw+" > "+bx+" and "+ay+" < "+by+" + "+bh+" and "+ay+" + "+ah+" > "+by+")";
+  }
 
   if(py){
     var PA=py.ORDER_ATOMIC!=null?py.ORDER_ATOMIC:0, PN=py.ORDER_NONE!=null?py.ORDER_NONE:99;
@@ -361,6 +389,10 @@
     pf["aka_tone"]=function(b){return "aka.tone("+num(py,b,"FREQ",PA)+", "+num(py,b,"MS",PA)+")\n";};
     pf["aka_no_tone"]=function(){return "aka.no_tone()\n";};
     pf["aka_set_volume"]=function(b){return "aka.set_volume("+num(py,b,"P",PA)+")\n";};
+    pf["aka_collide"]=function(b){return [collideExpr(py,b,PA),PN];};
+    pf["aka_clamp"]=function(b){return ["max("+num(py,b,"MIN",PA)+", min("+num(py,b,"MAX",PA)+", "+num(py,b,"V",PA)+"))",PA];};
+    pf["aka_note"]=function(b){return "aka.tone("+noteFreq(b)+", "+num(py,b,"MS",PA)+")\n";};
+    pf["aka_wait_frames"]=function(b){return "for _ in range("+num(py,b,"N",PA)+"):\n"+py.INDENT+"aka.update()\n";};
     pf["aka_width"]=function(){return ["aka.width()",PA];};
     pf["aka_height"]=function(){return ["aka.height()",PA];};
   }
@@ -401,6 +433,10 @@
     lf["aka_tone"]=function(){return "-- tone : créez une source audio avec love.audio\n";};
     lf["aka_no_tone"]=function(){return "love.audio.stop()\n";};
     lf["aka_set_volume"]=function(b){return "love.audio.setVolume(("+num(lua,b,"P",LA)+") / 100)\n";};
+    lf["aka_collide"]=function(b){return [collideExpr(lua,b,LA),LN];};
+    lf["aka_clamp"]=function(b){return ["math.max("+num(lua,b,"MIN",LA)+", math.min("+num(lua,b,"MAX",LA)+", "+num(lua,b,"V",LA)+"))",LA];};
+    lf["aka_note"]=function(){return "-- note : en Love2D, générez une source audio (love.audio)\n";};
+    lf["aka_wait_frames"]=function(){return "-- attendre N images : géré par la boucle love.update\n";};
     lf["aka_width"]=function(){return ["love.graphics.getWidth()",LA];};
     lf["aka_height"]=function(){return ["love.graphics.getHeight()",LA];};
   }
@@ -430,21 +466,25 @@
       {kind:"block",type:"math_number"},
       {kind:"block",type:"math_arithmetic",inputs:{A:shadowNum(1),B:shadowNum(1)}},
       {kind:"block",type:"math_random_int",inputs:{FROM:shadowNum(1),TO:shadowNum(100)}},
-      {kind:"block",type:"math_modulo",inputs:{DIVIDEND:shadowNum(10),DIVISOR:shadowNum(3)}}]},
+      {kind:"block",type:"math_modulo",inputs:{DIVIDEND:shadowNum(10),DIVISOR:shadowNum(3)}},
+      {kind:"block",type:"aka_clamp",inputs:{V:shadowNum(0),MIN:shadowNum(0),MAX:shadowNum(100)}}]},
     {kind:"category",name:"Logique",colour:"#5b80a5",contents:[
+      {kind:"block",type:"aka_collide",inputs:{AX:shadowNum(10),AY:shadowNum(10),AW:shadowNum(16),AH:shadowNum(16),BX:shadowNum(20),BY:shadowNum(20),BW:shadowNum(16),BH:shadowNum(16)}},
       {kind:"block",type:"controls_if"},{kind:"block",type:"logic_compare"},
       {kind:"block",type:"logic_operation"},{kind:"block",type:"logic_negate"},
       {kind:"block",type:"logic_boolean"}]},
     {kind:"category",name:"Boucles",colour:"#5ba55b",contents:[
       {kind:"block",type:"controls_repeat_ext",inputs:{TIMES:shadowNum(10)}},
       {kind:"block",type:"controls_whileUntil"},
-      {kind:"block",type:"controls_for",inputs:{FROM:shadowNum(1),TO:shadowNum(10),BY:shadowNum(1)}}]},
+      {kind:"block",type:"controls_for",inputs:{FROM:shadowNum(1),TO:shadowNum(10),BY:shadowNum(1)}},
+      {kind:"block",type:"aka_wait_frames",inputs:{N:shadowNum(30)}}]},
     {kind:"category",name:"Texte",colour:"#a5745b",contents:[
       {kind:"block",type:"text",fields:{TEXT:"texte"}},
       {kind:"block",type:"text_join",inputs:{ADD0:shadowTxt("Score: "),ADD1:shadowTxt("0")}}]},
     {kind:"category",name:"Son & Musique",colour:C_SOUND,contents:[
       {kind:"block",type:"aka_tone",inputs:{FREQ:shadowNum(440),MS:shadowNum(200)}},
       {kind:"block",type:"aka_no_tone"},
+      {kind:"block",type:"aka_note",inputs:{MS:shadowNum(200)}},
       {kind:"block",type:"aka_set_volume",inputs:{P:shadowNum(80)}}]},
     {kind:"category",name:"Fichiers / SD",colour:C_FILE,contents:[
       {kind:"block",type:"aka_file_exists",inputs:{PATH:shadowTxt("/data/score.txt")}},
