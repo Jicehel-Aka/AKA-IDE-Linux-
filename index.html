@@ -324,6 +324,11 @@
      args0:[{type:"field_input",name:"TXT",text:"Score"},
             {type:"input_value",name:"X",check:"Number"},{type:"input_value",name:"Y",check:"Number"}],
      inputsInline:true,previousStatement:null,nextStatement:null,colour:C_DRAW},
+    {type:"aka_text_dyn",message0:"afficher %1 en x %2 y %3",
+     args0:[{type:"input_value",name:"V",check:"String"},
+            {type:"input_value",name:"X",check:"Number"},{type:"input_value",name:"Y",check:"Number"}],
+     inputsInline:true,previousStatement:null,nextStatement:null,colour:C_DRAW,
+     tooltip:"Affiche un texte CALCULÉ (variable, nombre converti, « Score: »+score…) à l'écran."},
     {type:"aka_pixel",message0:"pixel x %1 y %2",
      args0:[{type:"input_value",name:"X",check:"Number"},{type:"input_value",name:"Y",check:"Number"}],
      inputsInline:true,previousStatement:null,nextStatement:null,colour:C_DRAW},
@@ -450,6 +455,7 @@
     pf["aka_fill_rect"]=function(b){return "aka.fill_rect("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+", "+num(py,b,"W",PA)+", "+num(py,b,"H",PA)+")\n";};
     pf["aka_fill_circle"]=function(b){return "aka.fill_circle("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+", "+num(py,b,"R",PA)+")\n";};
     pf["aka_text"]=function(b){return "aka.text("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+", "+py.quote_(b.getFieldValue("TXT"))+")\n";};
+    pf["aka_text_dyn"]=function(b){return "aka.text("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+", str("+(py.valueToCode(b,"V",PA)||"''")+"))\n";};
     pf["aka_pixel"]=function(b){return "aka.pixel("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+")\n";};
     pf["aka_line"]=function(b){return "aka.line("+num(py,b,"X1",PA)+", "+num(py,b,"Y1",PA)+", "+num(py,b,"X2",PA)+", "+num(py,b,"Y2",PA)+")\n";};
     pf["aka_rect"]=function(b){return "aka.rect("+num(py,b,"X",PA)+", "+num(py,b,"Y",PA)+", "+num(py,b,"W",PA)+", "+num(py,b,"H",PA)+")\n";};
@@ -499,6 +505,7 @@
     lf["aka_fill_rect"]=function(b){return 'love.graphics.rectangle("fill", '+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+", "+num(lua,b,"W",LA)+", "+num(lua,b,"H",LA)+")\n";};
     lf["aka_fill_circle"]=function(b){return 'love.graphics.circle("fill", '+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+", "+num(lua,b,"R",LA)+")\n";};
     lf["aka_text"]=function(b){return "love.graphics.print("+lua.quote_(b.getFieldValue("TXT"))+", "+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+")\n";};
+    lf["aka_text_dyn"]=function(b){return "love.graphics.print(tostring("+(lua.valueToCode(b,"V",LA)||"''")+"), "+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+")\n";};
     lf["aka_pixel"]=function(b){return "love.graphics.points("+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+")\n";};
     lf["aka_line"]=function(b){return "love.graphics.line("+num(lua,b,"X1",LA)+", "+num(lua,b,"Y1",LA)+", "+num(lua,b,"X2",LA)+", "+num(lua,b,"Y2",LA)+")\n";};
     lf["aka_rect"]=function(b){return 'love.graphics.rectangle("line", '+num(lua,b,"X",LA)+", "+num(lua,b,"Y",LA)+", "+num(lua,b,"W",LA)+", "+num(lua,b,"H",LA)+")\n";};
@@ -691,6 +698,7 @@
   cf["aka_line"]=function(b){return "gfx.drawLine("+cnum(b,"X1")+", "+cnum(b,"Y1")+", "+cnum(b,"X2")+", "+cnum(b,"Y2")+");\n";};
   cf["aka_pixel"]=function(b){return "gfx.drawPixel("+cnum(b,"X")+", "+cnum(b,"Y")+");\n";};
   cf["aka_text"]=function(b){return "gfx.move_cursor("+cnum(b,"X")+", "+cnum(b,"Y")+"); gfx.print_str("+cstr(b.getFieldValue("TXT"))+");\n";};
+  cf["aka_text_dyn"]=function(b){ cpp._useStr=true; return "gfx.move_cursor("+cnum(b,"X")+", "+cnum(b,"Y")+"); gfx.print_str(aka_str("+(cpp.valueToCode(b,"V",CA)||'""')+").c_str());\n"; };
   cf["aka_display"]=function(){return "gfx.update();\n";};
   cf["aka_sleep_ms"]=function(b){return "vTaskDelay(pdMS_TO_TICKS("+cnum(b,"MS")+"));\n";};
   cf["aka_ticks_ms"]=function(){return ["(uint32_t)(esp_timer_get_time() / 1000)",CA];};
@@ -802,7 +810,8 @@
       {kind:"block",type:"aka_circle",inputs:{X:shadowNum(160),Y:shadowNum(120),R:shadowNum(16)}},
       {kind:"block",type:"aka_line",inputs:{X1:shadowNum(0),Y1:shadowNum(0),X2:shadowNum(100),Y2:shadowNum(80)}},
       {kind:"block",type:"aka_pixel",inputs:{X:shadowNum(10),Y:shadowNum(10)}},
-      {kind:"block",type:"aka_text",inputs:{X:shadowNum(8),Y:shadowNum(8)}}]},
+      {kind:"block",type:"aka_text",inputs:{X:shadowNum(8),Y:shadowNum(8)}},
+      {kind:"block",type:"aka_text_dyn",inputs:{V:shadowTxt("Score: "),X:shadowNum(8),Y:shadowNum(8)}}]},
     {kind:"category",name:"Entrées",colour:C_INPUT,contents:[
       {kind:"block",type:"aka_button"},{kind:"block",type:"aka_joystick"},
       {kind:"block",type:"aka_vibrate",inputs:{MS:shadowNum(120)}}]},
