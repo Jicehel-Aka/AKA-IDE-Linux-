@@ -154,13 +154,14 @@
       <span class="logo" aria-hidden="true">🧱</span>
       <div>
         <h1>Studio Blockly AKA</h1>
-        <small>Blocs → code <b>aka</b> (Python) &amp; Love2D (Lua)</small>
+        <small>Blocs → code <b>aka</b> (Python), Love2D (Lua) &amp; C++ natif</small>
       </div>
     </div>
     <div class="controls">
       <div class="langpick" role="group" aria-label="Langages affichés">
         <label><input type="checkbox" id="showPy" checked> MicroPython</label>
         <label><input type="checkbox" id="showLua"> Love2D</label>
+        <label><input type="checkbox" id="showCpp"> C++ natif</label>
       </div>
       <button class="btn" id="importBtn" title="Importer un tutoriel au format JSON">📥 Importer un tuto</button>
       <button class="btn" id="clearBtn" title="Vider l'atelier">🗑 Effacer</button>
@@ -177,7 +178,7 @@
       </div>
 
       <section class="pane" id="paneCode" role="tabpanel">
-        <p class="verdict" id="noLang" hidden>Coche MicroPython et/ou Love2D pour afficher le code.</p>
+        <p class="verdict" id="noLang" hidden>Coche MicroPython, Love2D et/ou C++ natif pour afficher le code.</p>
         <div class="codeblock" id="blockPy">
           <div class="code-head"><span>main.py — MicroPython AKA</span>
             <button class="btn" data-copy="codePy">Copier</button></div>
@@ -188,9 +189,16 @@
             <button class="btn" data-copy="codeLua">Copier</button></div>
           <pre id="codeLua" tabindex="0">… assemble des blocs pour voir le code …</pre>
         </div>
+        <div class="codeblock" id="blockCpp" hidden>
+          <div class="code-head"><span>main.cpp — C++ natif (lib Gamebuino)</span>
+            <button class="btn" data-copy="codeCpp">Copier</button></div>
+          <pre id="codeCpp" tabindex="0">… assemble des blocs pour voir le code …</pre>
+        </div>
         <p class="foot-note">Le code utilise la <b>vraie API</b> de la console : module <code>aka</code> en MicroPython,
-        <code>love.graphics</code>/<code>love.keyboard</code> en Lua (Love2D). Colle-le dans l'éditeur de scripts de
-        l'IDE pour le tester au simulateur ou l'envoyer sur la carte.</p>
+        <code>love.graphics</code>/<code>love.keyboard</code> en Lua (Love2D), et la lib native
+        (<code>gfx</code>/<code>g_audio_player</code>/<code>akaRuntime</code>) en <b>C++</b>. Le C++ généré est un
+        programme ESP-IDF complet (à placer dans un projet utilisant le composant <code>gamebuino</code>) ; quelques
+        blocs (son, lecture de fichiers) y sont marqués <code>TODO</code> car ils demandent du câblage natif.</p>
       </section>
 
       <section class="pane" id="paneTuto" role="tabpanel" hidden>
@@ -500,6 +508,114 @@
     lf["aka_height"]=function(){return ["love.graphics.getHeight()",LA];};
   }
 
+  // ---- Générateur C++ natif (lib Gamebuino : gfx / g_audio_player / akaRuntime / g_keys) ----
+  var CppGen = Blockly.CodeGenerator || Blockly.Generator;
+  var cpp = new CppGen("AKACPP");
+  cpp.ORDER_ATOMIC=0; cpp.ORDER_NONE=99; cpp.INDENT="    ";
+  var CA=cpp.ORDER_ATOMIC, CN=cpp.ORDER_NONE;
+  function cstr(s){ s=String(s).replace(/\\/g,"\\\\").replace(/"/g,'\\"').replace(/\n/g,"\\n"); return '"'+s+'"'; }
+  function cnum(b,n){ return cpp.valueToCode(b,n,CA)||"0"; }
+  function cval(b,n){ return cpp.valueToCode(b,n,CA)||'""'; }
+  function cvar(b){ try{ var v=b.getField("VAR").getVariable(); var s=(v?v.name:"var").replace(/[^A-Za-z0-9_]/g,"_"); if(/^[0-9]/.test(s)) s="v_"+s; return s; }catch(e){ return "v"; } }
+  cpp.scrub_=function(block,code,thisOnly){ var nx=block.nextConnection&&block.nextConnection.targetBlock(); return code+((thisOnly||!nx)?"":cpp.blockToCode(nx)); };
+  cpp.init=function(ws){ cpp._li=0; cpp._ws=ws; };
+  cpp.finish=function(code){
+    var decls="";
+    try{
+      var vars=cpp._ws.getAllVariables?cpp._ws.getAllVariables():(cpp._ws.getVariableMap&&cpp._ws.getVariableMap().getAllVariables());
+      (vars||[]).forEach(function(v){ var s=v.name.replace(/[^A-Za-z0-9_]/g,"_"); if(/^[0-9]/.test(s)) s="v_"+s; decls+="static int "+s+" = 0;\n"; });
+    }catch(e){}
+    var head=
+      "// Programme C++ natif Gamebuino AKA (généré par le Studio Blockly).\n"+
+      "// À placer dans un projet ESP-IDF utilisant le composant gamebuino.\n"+
+      "#include \"gb_core.h\"\n#include \"gb_graphics.h\"\n#include \"gb_audio_player.h\"\n#include \"gb_common.h\"\n"+
+      "#include \"gb_ll_adc.h\"\n#include \"gb_ll_expander.h\"\n#include \"core/input.h\"\n#include \"aka_runtime/aka_runtime.h\"\n"+
+      "#include <freertos/FreeRTOS.h>\n#include <freertos/task.h>\n#include \"esp_timer.h\"\n#include <cstdlib>\n#include <cstdio>\n#include <sys/stat.h>\n#include <unistd.h>\n\n"+
+      "gb_core         g_core;\ngb_graphics     gfx;\ngb_audio_player g_audio_player;\n\n"+
+      "// Masques boutons (valeurs AKA_KEY_* alignées sur EXPANDER_KEY_*)\n"+
+      "static const uint32_t AKA_KEY_RUN=0x0002, AKA_KEY_MENU=0x0004, AKA_KEY_R1=0x0040, AKA_KEY_L1=0x0080,\n"+
+      "  AKA_KEY_RIGHT=0x0100, AKA_KEY_UP=0x0200, AKA_KEY_DOWN=0x0400, AKA_KEY_LEFT=0x0800,\n"+
+      "  AKA_KEY_D=0x1000, AKA_KEY_B=0x2000, AKA_KEY_C=0x4000, AKA_KEY_A=0x8000;\n\n"+
+      (decls?decls+"\n":"");
+    var inner=cpp.prefixLines(code, cpp.INDENT);
+    return head+
+      "extern \"C\" void app_main(void) {\n"+
+      cpp.INDENT+"g_core.init();\n"+
+      cpp.INDENT+"gfx.set_backlight_percent(80);\n"+
+      cpp.INDENT+"gfx.set_refresh_rate(60);\n"+
+      cpp.INDENT+"input_init();\n"+
+      cpp.INDENT+"akaRuntime.begin(\"mon_jeu\");\n\n"+
+      inner+
+      "}\n";
+  };
+  var cf=cpp.forBlock;
+  cf["aka_update_loop"]=function(b){ var body=cpp.statementToCode(b,"DO");
+    return "while (true) {\n"+cpp.INDENT+"input_poll(g_keys);\n"+cpp.INDENT+"if (!akaRuntime.update(g_keys)) { vTaskDelay(pdMS_TO_TICKS(16)); continue; }\n"+body+cpp.INDENT+"gfx.update();\n"+cpp.INDENT+"vTaskDelay(pdMS_TO_TICKS(16));\n}\n"; };
+  cf["aka_clear"]=function(){return "gfx.clear(gfx.makeColor(0, 0, 0));\n";};
+  cf["aka_set_color"]=function(b){return "gfx.setColor(gfx.makeColor("+b.getFieldValue("R")+", "+b.getFieldValue("G")+", "+b.getFieldValue("B")+"));\n";};
+  cf["aka_fill_rect"]=function(b){return "gfx.fillRect("+cnum(b,"X")+", "+cnum(b,"Y")+", "+cnum(b,"W")+", "+cnum(b,"H")+");\n";};
+  cf["aka_rect"]=function(b){return "gfx.drawRect("+cnum(b,"X")+", "+cnum(b,"Y")+", "+cnum(b,"W")+", "+cnum(b,"H")+");\n";};
+  cf["aka_fill_circle"]=function(b){return "gfx.fillCircle("+cnum(b,"X")+", "+cnum(b,"Y")+", "+cnum(b,"R")+");\n";};
+  cf["aka_circle"]=function(b){return "gfx.drawCircle("+cnum(b,"X")+", "+cnum(b,"Y")+", "+cnum(b,"R")+");\n";};
+  cf["aka_line"]=function(b){return "gfx.drawLine("+cnum(b,"X1")+", "+cnum(b,"Y1")+", "+cnum(b,"X2")+", "+cnum(b,"Y2")+");\n";};
+  cf["aka_pixel"]=function(b){return "gfx.drawPixel("+cnum(b,"X")+", "+cnum(b,"Y")+");\n";};
+  cf["aka_text"]=function(b){return "gfx.move_cursor("+cnum(b,"X")+", "+cnum(b,"Y")+"); gfx.print_str("+cstr(b.getFieldValue("TXT"))+");\n";};
+  cf["aka_display"]=function(){return "gfx.update();\n";};
+  cf["aka_sleep_ms"]=function(b){return "vTaskDelay(pdMS_TO_TICKS("+cnum(b,"MS")+"));\n";};
+  cf["aka_ticks_ms"]=function(){return ["(uint32_t)(esp_timer_get_time() / 1000)",CA];};
+  cf["aka_wait_frames"]=function(b){return "for (int _w = 0; _w < "+cnum(b,"N")+"; _w++) { input_poll(g_keys); akaRuntime.update(g_keys); gfx.update(); vTaskDelay(pdMS_TO_TICKS(16)); }\n";};
+  var KMASK={A:"AKA_KEY_A",B:"AKA_KEY_B",C:"AKA_KEY_C",D:"AKA_KEY_D",UP:"AKA_KEY_UP",DOWN:"AKA_KEY_DOWN",LEFT:"AKA_KEY_LEFT",RIGHT:"AKA_KEY_RIGHT",MENU:"AKA_KEY_MENU",RUN:"AKA_KEY_RUN",L1:"AKA_KEY_L1",R1:"AKA_KEY_R1"};
+  cf["aka_button"]=function(b){ var src=b.getFieldValue("MODE")==="held"?"g_keys.raw":b.getFieldValue("MODE")==="released"?"g_keys.released":"g_keys.pressed";
+    return ["(("+src+" & "+(KMASK[b.getFieldValue("BTN")]||"0")+") != 0)",CA]; };
+  cf["aka_joystick"]=function(b){return [b.getFieldValue("AXE")==="1"?"g_keys.joxy":"g_keys.joxx",CA];};
+  cf["aka_vibrate"]=function(b){return "g_audio_player.vibrator("+cnum(b,"MS")+");\n";};
+  cf["aka_screenshot"]=function(){return "akaRuntime.takeScreenshot();\n";};
+  cf["aka_set_brightness"]=function(b){return "gfx.set_backlight_percent("+cnum(b,"P")+");\n";};
+  cf["aka_battery"]=function(){return ["gb_ll_adc_read_vbatt_percent()",CA];};
+  cf["aka_power_off"]=function(){return "gb_ll_expander_power_off();\n";};
+  cf["aka_loader"]=function(){return "akaRuntime.returnToLoader();\n";};
+  cf["aka_set_volume"]=function(b){return "g_audio_player.set_master_volume((uint8_t)("+cnum(b,"P")+" * 255 / 100));\n";};
+  cf["aka_width"]=function(){return ["SCREEN_WIDTH",CA];};
+  cf["aka_height"]=function(){return ["SCREEN_HEIGHT",CA];};
+  cf["aka_tone"]=function(b){return "/* TODO son natif : gb_audio_track_tone + g_audio_player.add_track (cf. aka_hal.cpp) : "+cnum(b,"FREQ")+" Hz, "+cnum(b,"MS")+" ms */\n";};
+  cf["aka_no_tone"]=function(){return "/* TODO : couper la tonalite (gb_audio_track_tone) */\n";};
+  cf["aka_note"]=function(){return "/* TODO note : convertir en frequence puis jouer (gb_audio_track_tone) */\n";};
+  cf["aka_file_exists"]=function(b){return ["(access("+cval(b,"PATH")+", F_OK) == 0)",CA];};
+  cf["aka_file_read"]=function(b){return ["\"\" /* TODO lire "+cval(b,"PATH")+" en std::string (fopen) */",CA];};
+  cf["aka_file_write"]=function(b){return "{ FILE *f = fopen("+cval(b,"PATH")+", \"w\"); if (f) { fputs("+cval(b,"DATA")+", f); fclose(f); } }\n";};
+  cf["aka_list_py"]=function(){return ["nullptr /* TODO lister les .py (opendir/readdir) */",CA];};
+  cf["aka_mkdir"]=function(b){return "mkdir("+cval(b,"PATH")+", 0777);\n";};
+  cf["aka_collide"]=function(b){ var ax=cnum(b,"AX"),ay=cnum(b,"AY"),aw=cnum(b,"AW"),ah=cnum(b,"AH"),bx=cnum(b,"BX"),by=cnum(b,"BY"),bw=cnum(b,"BW"),bh=cnum(b,"BH");
+    return ["("+ax+" < "+bx+" + "+bw+" && "+ax+" + "+aw+" > "+bx+" && "+ay+" < "+by+" + "+bh+" && "+ay+" + "+ah+" > "+by+")",CA]; };
+  cf["aka_clamp"]=function(b){ var v=cnum(b,"V"),mn=cnum(b,"MIN"),mx=cnum(b,"MAX");
+    return ["(("+v+") < ("+mn+") ? ("+mn+") : (("+v+") > ("+mx+") ? ("+mx+") : ("+v+")))",CA]; };
+  // Blocs standard Blockly -> C++
+  cf["math_number"]=function(b){return [String(Number(b.getFieldValue("NUM"))),CA];};
+  cf["text"]=function(b){return [cstr(b.getFieldValue("TEXT")),CA];};
+  cf["math_arithmetic"]=function(b){ var O={ADD:" + ",MINUS:" - ",MULTIPLY:" * ",DIVIDE:" / "},op=b.getFieldValue("OP"),a=cnum(b,"A"),c=cnum(b,"B");
+    return op==="POWER"?["pow("+a+", "+c+")",CA]:["("+a+O[op]+c+")",CA]; };
+  cf["math_modulo"]=function(b){return ["("+cnum(b,"DIVIDEND")+" % "+cnum(b,"DIVISOR")+")",CA];};
+  cf["math_random_int"]=function(b){return ["("+cnum(b,"FROM")+" + rand() % (("+cnum(b,"TO")+") - ("+cnum(b,"FROM")+") + 1))",CA];};
+  cf["logic_compare"]=function(b){ var O={EQ:" == ",NEQ:" != ",LT:" < ",LTE:" <= ",GT:" > ",GTE:" >= "};
+    return ["("+cnum(b,"A")+O[b.getFieldValue("OP")]+cnum(b,"B")+")",CA]; };
+  cf["logic_operation"]=function(b){ var o=b.getFieldValue("OP")==="AND"?" && ":" || ";
+    return ["("+(cpp.valueToCode(b,"A",CA)||"false")+o+(cpp.valueToCode(b,"B",CA)||"false")+")",CA]; };
+  cf["logic_negate"]=function(b){return ["!("+(cpp.valueToCode(b,"BOOL",CA)||"false")+")",CA];};
+  cf["logic_boolean"]=function(b){return [b.getFieldValue("BOOL")==="TRUE"?"true":"false",CA];};
+  cf["variables_get"]=function(b){return [cvar(b),CA];};
+  cf["variables_set"]=function(b){return cvar(b)+" = "+(cpp.valueToCode(b,"VALUE",CN)||"0")+";\n";};
+  cf["math_change"]=function(b){return cvar(b)+" += "+(cpp.valueToCode(b,"DELTA",CN)||"0")+";\n";};
+  cf["text_join"]=function(){return ["\"\" /* text_join : non gere en C++ natif */",CA];};
+  cf["controls_if"]=function(b){ var n=0,code="",branch,cond;
+    do{ cond=cpp.valueToCode(b,"IF"+n,CN)||"false"; branch=cpp.statementToCode(b,"DO"+n);
+        code+=(n===0?"if":"else if")+" ("+cond+") {\n"+branch+"}\n"; n++; } while(b.getInput("IF"+n));
+    if(b.getInput("ELSE")){ branch=cpp.statementToCode(b,"ELSE"); code+="else {\n"+branch+"}\n"; }
+    return code; };
+  cf["controls_repeat_ext"]=function(b){ var r=cpp.valueToCode(b,"TIMES",CA)||"0",body=cpp.statementToCode(b,"DO"); cpp._li=(cpp._li||0)+1; var i="_i"+cpp._li;
+    return "for (int "+i+" = 0; "+i+" < "+r+"; "+i+"++) {\n"+body+"}\n"; };
+  cf["controls_for"]=function(b){ var v=cvar(b),from=cpp.valueToCode(b,"FROM",CA)||"0",to=cpp.valueToCode(b,"TO",CA)||"0",by=cpp.valueToCode(b,"BY",CA)||"1",body=cpp.statementToCode(b,"DO");
+    return "for (int "+v+" = "+from+"; "+v+" <= "+to+"; "+v+" += "+by+") {\n"+body+"}\n"; };
+
   // ---- Boîte à outils (avec valeurs par défaut en « ombres ») --------------
   function shadowNum(v){return {shadow:{type:"math_number",fields:{NUM:v}}};}
   function shadowTxt(t){return {shadow:{type:"text",fields:{TEXT:t}}};}
@@ -607,9 +723,9 @@
   requestAnimationFrame(function(){requestAnimationFrame(resize);});
 
   // ---- Génération de code en direct (MicroPython et/ou Love2D) -------------
-  var showPy=document.getElementById("showPy"), showLua=document.getElementById("showLua");
-  var blockPy=document.getElementById("blockPy"), blockLua=document.getElementById("blockLua");
-  var codePy=document.getElementById("codePy"), codeLua=document.getElementById("codeLua");
+  var showPy=document.getElementById("showPy"), showLua=document.getElementById("showLua"), showCpp=document.getElementById("showCpp");
+  var blockPy=document.getElementById("blockPy"), blockLua=document.getElementById("blockLua"), blockCpp=document.getElementById("blockCpp");
+  var codePy=document.getElementById("codePy"), codeLua=document.getElementById("codeLua"), codeCpp=document.getElementById("codeCpp");
   var noLang=document.getElementById("noLang");
   var LKEY="aka-blockly-langs";
   function gen1(g){
@@ -618,17 +734,19 @@
     catch(e){ return "// "+e.message; }
   }
   function generate(){
-    var p=showPy.checked, l=showLua.checked;
-    blockPy.hidden=!p; blockLua.hidden=!l; noLang.hidden=(p||l);
+    var p=showPy.checked, l=showLua.checked, c=showCpp.checked;
+    blockPy.hidden=!p; blockLua.hidden=!l; blockCpp.hidden=!c; noLang.hidden=(p||l||c);
     if(p) codePy.textContent=gen1(py);
     if(l) codeLua.textContent=gen1(lua);
+    if(c) codeCpp.textContent=gen1(cpp);
   }
   function onLangChange(){
-    try{ localStorage.setItem(LKEY, JSON.stringify({py:showPy.checked,lua:showLua.checked})); }catch(e){}
+    try{ localStorage.setItem(LKEY, JSON.stringify({py:showPy.checked,lua:showLua.checked,cpp:showCpp.checked})); }catch(e){}
     generate();
   }
   showPy.addEventListener("change",onLangChange);
   showLua.addEventListener("change",onLangChange);
+  showCpp.addEventListener("change",onLangChange);
 
   ws.addChangeListener(function(e){
     if(e.isUiEvent) return;
@@ -948,7 +1066,7 @@
 
   // ---- Démarrage ------------------------------------------------------------
   restoreState();
-  try{ var lp=JSON.parse(localStorage.getItem(LKEY)||"null"); if(lp){ showPy.checked=!!lp.py; showLua.checked=!!lp.lua; } }catch(e){}
+  try{ var lp=JSON.parse(localStorage.getItem(LKEY)||"null"); if(lp){ showPy.checked=!!lp.py; showLua.checked=!!lp.lua; showCpp.checked=!!lp.cpp; } }catch(e){}
   generate();
   lastDone=countDone();   // synchronise le compteur pour que l'auto-validation marche dès la 1re action
   renderTuto();
