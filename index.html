@@ -196,10 +196,11 @@
         </div>
         <p class="foot-note">Le code utilise la <b>vraie API</b> de la console : module <code>aka</code> en MicroPython,
         <code>love.graphics</code>/<code>love.audio</code> en Lua (Love2D), et la lib native
-        (<code>gfx</code>/<code>g_audio_player</code>/<code>akaRuntime</code>) en <b>C++</b> — son, carte SD et lecture
-        de fichiers compris. Le C++ généré est un programme ESP-IDF complet (à placer dans un projet utilisant le
-        composant <code>gamebuino</code>) ; les variables y sont typées <code>int</code>, donc stocke le résultat d'une
-        lecture de fichier (texte) directement plutôt que dans une variable.</p>
+        (<code>gfx</code>/<code>g_audio_player</code>/<code>akaRuntime</code>) en <b>C++</b> — son, carte SD, fichiers
+        et chaînes compris. Le C++ généré est un programme ESP-IDF complet (à placer dans un projet utilisant le
+        composant <code>gamebuino</code>) ; les variables sont <b>typées automatiquement</b> (<code>int</code>,
+        <code>std::string</code> ou <code>std::vector&lt;std::string&gt;</code>) selon ce qu'on leur affecte, et les
+        opérations de texte (joindre, texte↔nombre, longueur) sont gérées dans les trois langages.</p>
       </section>
 
       <section class="pane" id="paneTuto" role="tabpanel" hidden>
@@ -409,7 +410,13 @@
      inputsInline:true,previousStatement:null,nextStatement:null,colour:C_SCREEN,
      tooltip:"Laisse passer N frames (appelle aka.update())."},
     {type:"aka_width",message0:"largeur écran",output:"Number",colour:C_VALUE},
-    {type:"aka_height",message0:"hauteur écran",output:"Number",colour:C_VALUE}
+    {type:"aka_height",message0:"hauteur écran",output:"Number",colour:C_VALUE},
+    {type:"aka_to_text",message0:"texte de %1",args0:[{type:"input_value",name:"V"}],
+     output:"String",inputsInline:true,colour:"#a5745b",tooltip:"Convertit une valeur (nombre…) en texte."},
+    {type:"aka_to_number",message0:"nombre de %1",args0:[{type:"input_value",name:"V",check:"String"}],
+     output:"Number",inputsInline:true,colour:C_VALUE,tooltip:"Convertit un texte en nombre."},
+    {type:"aka_text_length",message0:"longueur de %1",args0:[{type:"input_value",name:"V",check:"String"}],
+     output:"Number",inputsInline:true,colour:"#a5745b",tooltip:"Nombre de caractères du texte."}
   ]);
 
   // ---- Générateurs ---------------------------------------------------------
@@ -463,6 +470,9 @@
     pf["aka_wait_frames"]=function(b){return "for _ in range("+num(py,b,"N",PA)+"):\n"+py.INDENT+"aka.update()\n";};
     pf["aka_width"]=function(){return ["aka.width()",PA];};
     pf["aka_height"]=function(){return ["aka.height()",PA];};
+    pf["aka_to_text"]=function(b){return ["str("+(py.valueToCode(b,"V",PA)||"''")+")",PA];};
+    pf["aka_to_number"]=function(b){return ["int("+(py.valueToCode(b,"V",PA)||"'0'")+")",PA];};
+    pf["aka_text_length"]=function(b){return ["len("+(py.valueToCode(b,"V",PA)||"''")+")",PA];};
   }
   if(lua){
     var LA=lua.ORDER_ATOMIC!=null?lua.ORDER_ATOMIC:0, LN=lua.ORDER_NONE!=null?lua.ORDER_NONE:99;
@@ -519,6 +529,9 @@
     lf["aka_wait_frames"]=function(){return "-- attendre N images : géré par la boucle love.update\n";};
     lf["aka_width"]=function(){return ["love.graphics.getWidth()",LA];};
     lf["aka_height"]=function(){return ["love.graphics.getHeight()",LA];};
+    lf["aka_to_text"]=function(b){return ["tostring("+(lua.valueToCode(b,"V",LA)||"''")+")",LA];};
+    lf["aka_to_number"]=function(b){return ["(tonumber("+(lua.valueToCode(b,"V",LA)||"'0'")+") or 0)",LA];};
+    lf["aka_text_length"]=function(b){return ["#("+(lua.valueToCode(b,"V",LA)||"''")+")",LA];};
   }
 
   // ---- Générateur C++ natif (lib Gamebuino : gfx / g_audio_player / akaRuntime / g_keys) ----
@@ -530,15 +543,49 @@
   function cnum(b,n){ return cpp.valueToCode(b,n,CA)||"0"; }
   function cval(b,n){ return cpp.valueToCode(b,n,CA)||'""'; }
   function cvar(b){ try{ var v=b.getField("VAR").getVariable(); var s=(v?v.name:"var").replace(/[^A-Za-z0-9_]/g,"_"); if(/^[0-9]/.test(s)) s="v_"+s; return s; }catch(e){ return "v"; } }
+  // Type C++ d'une valeur : "string" | "list" | "int"
+  function cppValType(blk){
+    if(!blk) return "int";
+    var t=blk.type;
+    if(t==="text"||t==="text_join"||t==="aka_file_read"||t==="aka_to_text") return "string";
+    if(t==="aka_list_py") return "list";
+    if(t==="variables_get") return (cpp._vt&&cpp._vt[cvar(blk)])||"int";
+    return "int";
+  }
   cpp.scrub_=function(block,code,thisOnly){ var nx=block.nextConnection&&block.nextConnection.targetBlock(); return code+((thisOnly||!nx)?"":cpp.blockToCode(nx)); };
-  cpp.init=function(ws){ cpp._li=0; cpp._ws=ws; cpp._useTone=false; cpp._useReadFile=false; cpp._useListPy=false; cpp._procs=[]; };
+  cpp.init=function(ws){
+    cpp._li=0; cpp._ws=ws; cpp._useTone=false; cpp._useReadFile=false; cpp._useListPy=false; cpp._useStr=false; cpp._procs=[];
+    // Inférence de types des variables (string / list / int) par point fixe.
+    cpp._vt={};
+    try{
+      var vs=ws.getAllVariables?ws.getAllVariables():(ws.getVariableMap&&ws.getVariableMap().getAllVariables());
+      (vs||[]).forEach(function(v){ var s=v.name.replace(/[^A-Za-z0-9_]/g,"_"); if(/^[0-9]/.test(s)) s="v_"+s; cpp._vt[s]="int"; });
+      var all=ws.getAllBlocks?ws.getAllBlocks(false):[];
+      for(var pass=0;pass<8;pass++){
+        var changed=false;
+        all.forEach(function(b){
+          if(b.type!=="variables_set") return;
+          var nm=cvar(b), ty=cppValType(b.getInputTargetBlock("VALUE")), cur=cpp._vt[nm]||"int";
+          var nt=(ty==="list"||cur==="list")?"list":((ty==="string"||cur==="string")?"string":"int");
+          if(nt!==cur){ cpp._vt[nm]=nt; changed=true; }
+        });
+        if(!changed) break;
+      }
+    }catch(e){ cpp._vt={}; }
+  };
   cpp.finish=function(code){
-    var I=cpp.INDENT, tone=!!cpp._useTone, rf=!!cpp._useReadFile, lp=!!cpp._useListPy;
-    var decls="";
+    var I=cpp.INDENT, tone=!!cpp._useTone, rf=!!cpp._useReadFile, lp=!!cpp._useListPy, usestr=!!cpp._useStr;
+    var decls="", hasStrVar=false, hasListVar=false;
     try{
       var vars=cpp._ws.getAllVariables?cpp._ws.getAllVariables():(cpp._ws.getVariableMap&&cpp._ws.getVariableMap().getAllVariables());
-      (vars||[]).forEach(function(v){ var s=v.name.replace(/[^A-Za-z0-9_]/g,"_"); if(/^[0-9]/.test(s)) s="v_"+s; decls+="static int "+s+" = 0;\n"; });
+      (vars||[]).forEach(function(v){ var s=v.name.replace(/[^A-Za-z0-9_]/g,"_"); if(/^[0-9]/.test(s)) s="v_"+s;
+        var ty=(cpp._vt&&cpp._vt[s])||"int";
+        if(ty==="string"){ hasStrVar=true; decls+="static std::string "+s+";\n"; }
+        else if(ty==="list"){ hasListVar=true; decls+="static std::vector<std::string> "+s+";\n"; }
+        else decls+="static int "+s+" = 0;\n";
+      });
     }catch(e){}
+    var needStr=usestr||rf||hasStrVar||hasListVar||lp, needVec=hasListVar||lp;
     var procs=(cpp._procs&&cpp._procs.length)?cpp._procs.join("\n")+"\n\n":"";
     var help=
       "// =============================================================================\n"+
@@ -560,8 +607,14 @@
       (tone?"#include \"gb_audio_track_tone.h\"\n":"")+
       "#include \"core/input.h\"\n#include \"aka_runtime/aka_runtime.h\"\n"+
       "#include <freertos/FreeRTOS.h>\n#include <freertos/task.h>\n#include \"esp_timer.h\"\n#include <cstdlib>\n#include <cstdio>\n#include <sys/stat.h>\n#include <unistd.h>\n"+
-      ((rf||lp)?"#include <string>\n":"")+(rf?"#include <fstream>\n#include <iterator>\n":"")+(lp?"#include <vector>\n#include <dirent.h>\n#include <cstring>\n":"")+"\n";
+      (needStr?"#include <string>\n":"")+(rf?"#include <fstream>\n#include <iterator>\n":"")+(needVec?"#include <vector>\n":"")+(lp?"#include <dirent.h>\n#include <cstring>\n":"")+"\n";
     var helpers="";
+    if(usestr){ helpers+=
+      "// Conversion universelle vers texte (pour concaténation, affichage…).\n"+
+      "static std::string aka_str(const std::string &s) { return s; }\n"+
+      "static std::string aka_str(const char *s) { return std::string(s); }\n"+
+      "static std::string aka_str(int n) { return std::to_string(n); }\n"+
+      "static std::string aka_str(float f) { return std::to_string(f); }\n\n"; }
     if(rf){ helpers+=
       "// Lit tout le contenu d'un fichier (carte SD) dans une std::string.\n"+
       "static std::string aka_read_file(const char *path) {\n"+
@@ -627,6 +680,9 @@
   cf["aka_set_volume"]=function(b){return "g_audio_player.set_master_volume((uint8_t)("+cnum(b,"P")+" * 255 / 100));\n";};
   cf["aka_width"]=function(){return ["SCREEN_WIDTH",CA];};
   cf["aka_height"]=function(){return ["SCREEN_HEIGHT",CA];};
+  cf["aka_to_text"]=function(b){ cpp._useStr=true; return ["aka_str("+(cpp.valueToCode(b,"V",CA)||"0")+")",CA]; };
+  cf["aka_to_number"]=function(b){ cpp._useStr=true; return ["atoi(aka_str("+(cpp.valueToCode(b,"V",CA)||'""')+").c_str())",CA]; };
+  cf["aka_text_length"]=function(b){ cpp._useStr=true; return ["((int)aka_str("+(cpp.valueToCode(b,"V",CA)||'""')+").size())",CA]; };
   cf["aka_tone"]=function(b){ cpp._useTone=true; return "s_tone_track.play_tone((float)("+cnum(b,"FREQ")+"), 1.0f, (uint16_t)("+cnum(b,"MS")+"), gb_audio_track_tone::SQUARE);\n"; };
   cf["aka_no_tone"]=function(){ cpp._useTone=true; return "s_tone_track.stop_playing();\n"; };
   cf["aka_note"]=function(b){ cpp._useTone=true; return "s_tone_track.play_tone("+noteFreq(b)+".0f, 1.0f, (uint16_t)("+cnum(b,"MS")+"), gb_audio_track_tone::SQUARE);\n"; };
@@ -653,9 +709,13 @@
   cf["logic_negate"]=function(b){return ["!("+(cpp.valueToCode(b,"BOOL",CA)||"false")+")",CA];};
   cf["logic_boolean"]=function(b){return [b.getFieldValue("BOOL")==="TRUE"?"true":"false",CA];};
   cf["variables_get"]=function(b){return [cvar(b),CA];};
-  cf["variables_set"]=function(b){return cvar(b)+" = "+(cpp.valueToCode(b,"VALUE",CN)||"0")+";\n";};
+  cf["variables_set"]=function(b){
+    var nm=cvar(b), vb=b.getInputTargetBlock("VALUE"), val=cpp.valueToCode(b,"VALUE",CN)||"0";
+    if(cpp._vt&&cpp._vt[nm]==="string"&&cppValType(vb)==="int"){ cpp._useStr=true; return nm+" = aka_str("+val+");\n"; }
+    return nm+" = "+val+";\n";
+  };
   cf["math_change"]=function(b){return cvar(b)+" += "+(cpp.valueToCode(b,"DELTA",CN)||"0")+";\n";};
-  cf["text_join"]=function(){return ["\"\" /* text_join : non gere en C++ natif */",CA];};
+  cf["text_join"]=function(b){ cpp._useStr=true; var i=0,parts=[]; while(b.getInput("ADD"+i)){ parts.push("aka_str("+(cpp.valueToCode(b,"ADD"+i,CA)||"\"\"")+")"); i++; } return [parts.length?"("+parts.join(" + ")+")":"std::string()",CA]; };
   cf["controls_if"]=function(b){ var n=0,code="",branch,cond;
     do{ cond=cpp.valueToCode(b,"IF"+n,CN)||"false"; branch=cpp.statementToCode(b,"DO"+n);
         code+=(n===0?"if":"else if")+" ("+cond+") {\n"+branch+"}\n"; n++; } while(b.getInput("IF"+n));
@@ -732,7 +792,10 @@
       {kind:"block",type:"aka_wait_frames",inputs:{N:shadowNum(30)}}]},
     {kind:"category",name:"Texte",colour:"#a5745b",contents:[
       {kind:"block",type:"text",fields:{TEXT:"texte"}},
-      {kind:"block",type:"text_join",inputs:{ADD0:shadowTxt("Score: "),ADD1:shadowTxt("0")}}]},
+      {kind:"block",type:"text_join",inputs:{ADD0:shadowTxt("Score: "),ADD1:shadowTxt("0")}},
+      {kind:"block",type:"aka_to_text",inputs:{V:shadowNum(0)}},
+      {kind:"block",type:"aka_to_number",inputs:{V:shadowTxt("0")}},
+      {kind:"block",type:"aka_text_length",inputs:{V:shadowTxt("texte")}}]},
     {kind:"category",name:"Son & Musique",colour:C_SOUND,contents:[
       {kind:"block",type:"aka_tone",inputs:{FREQ:shadowNum(440),MS:shadowNum(200)}},
       {kind:"block",type:"aka_no_tone"},
