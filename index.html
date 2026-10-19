@@ -132,6 +132,18 @@
   .sol-code{font-family:var(--mono);font-size:11.5px;line-height:1.5;background:var(--panel-2);border:1px solid var(--line);
     border-radius:8px;padding:10px;overflow:auto;max-height:220px;white-space:pre;margin:0 0 8px}
   .btn.mini{font-size:11px;padding:5px 9px}
+  /* --- Doc intégrée --- */
+  .doc-filter{width:100%;box-sizing:border-box;margin:0 0 12px;padding:8px 10px;border:1px solid var(--line);
+    border-radius:8px;background:var(--panel-2);color:var(--fg);font-family:var(--body);font-size:13px}
+  .doc-cat{font-family:var(--display);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+    color:var(--accent);margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+  .doc-item{border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin:0 0 8px}
+  .doc-b{font-weight:600;font-size:12.5px;margin-bottom:6px}
+  .doc-code{display:flex;gap:8px;align-items:flex-start;margin:2px 0}
+  .doc-lang{flex:0 0 34px;font-family:var(--mono);font-size:9.5px;font-weight:700;text-align:center;border-radius:4px;
+    padding:2px 0;color:#fff;margin-top:1px}
+  .doc-lang.py{background:#3572A5} .doc-lang.lua{background:#7a5bd1} .doc-lang.cpp{background:#b5563a}
+  .doc-code code{font-family:var(--mono);font-size:11px;color:var(--fg);white-space:pre-wrap;word-break:break-word;line-height:1.45}
 
   /* Modale intégrée (remplace prompt/confirm/alert, bloqués dans l'artifact) */
   .modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(5,9,18,.55);padding:16px}
@@ -175,6 +187,7 @@
       <div class="tabs" role="tablist">
         <button id="tabCode" role="tab" aria-selected="true">Code</button>
         <button id="tabTuto" role="tab" aria-selected="false">Tutoriel</button>
+        <button id="tabDoc" role="tab" aria-selected="false">Doc</button>
       </div>
 
       <section class="pane" id="paneCode" role="tabpanel">
@@ -234,6 +247,15 @@
         </div>
         <p class="foot-note">Tu peux aussi importer un parcours <code>.json</code> :
         <code>{ title, steps:[{ title, objective, instructions:[{ t, requireBlock }], hints, blocks, code }] }</code>.</p>
+      </section>
+
+      <section class="pane" id="paneDoc" role="tabpanel" hidden>
+        <h2 class="tuto-title">Référence des blocs</h2>
+        <p class="tuto-sub">Chaque bloc et le code qu'il génère en MicroPython (<code>aka</code>), Love2D (Lua) et C++ natif.</p>
+        <input id="docFilter" class="doc-filter" type="search" placeholder="Filtrer (ex. cercle, bouton, texte…)" autocomplete="off">
+        <div id="docList"></div>
+        <p class="foot-note">API réelle de la console. Le C++ est un programme ESP-IDF complet (composant <code>gamebuino</code>) ; certaines entrées
+        de valeur (x, y, …) ne sont pas montrées ici pour rester lisibles.</p>
       </section>
     </aside>
   </main>
@@ -955,15 +977,108 @@
 
   // ---- Onglets --------------------------------------------------------------
   function selectTab(which){
-    var code=which==="code";
-    document.getElementById("tabCode").setAttribute("aria-selected",String(code));
-    document.getElementById("tabTuto").setAttribute("aria-selected",String(!code));
-    document.getElementById("paneCode").hidden=!code;
-    document.getElementById("paneTuto").hidden=code;
-    if(!code) renderTuto();   // reflète l'état courant en ouvrant l'onglet Tutoriel
+    var panes={code:"paneCode",tuto:"paneTuto",doc:"paneDoc"}, tabs={code:"tabCode",tuto:"tabTuto",doc:"tabDoc"};
+    for(var k in panes){ document.getElementById(panes[k]).hidden=(k!==which); document.getElementById(tabs[k]).setAttribute("aria-selected",String(k===which)); }
+    if(which==="tuto") renderTuto();   // reflète l'état courant en ouvrant l'onglet Tutoriel
+    if(which==="doc") renderDoc();
   }
   document.getElementById("tabCode").onclick=function(){selectTab("code");};
   document.getElementById("tabTuto").onclick=function(){selectTab("tuto");};
+  document.getElementById("tabDoc").onclick=function(){selectTab("doc");};
+
+  // ---- Doc intégrée : référence des blocs (label + code aka / love / C++) ----
+  var DOCS=[
+    {cat:"Écran",items:[
+      {b:"Répéter chaque frame",py:"while aka.update():",lua:"function love.draw()",cpp:"while (true) { input_poll(g_keys); akaRuntime.update(g_keys); … gfx.update(); }"},
+      {b:"Effacer l'écran",py:"aka.clear()",lua:"love.graphics.clear()",cpp:"gfx.clear(gfx.makeColor(0,0,0))"},
+      {b:"Pause N ms",py:"aka.sleep_ms(n)",lua:"love.timer.sleep(n/1000)",cpp:"vTaskDelay(pdMS_TO_TICKS(n))"},
+      {b:"Attendre N images",py:"for _ in range(n): aka.update()",lua:"— (géré par love.update)",cpp:"for (…) { input_poll; akaRuntime.update; gfx.update; }"},
+      {b:"Temps écoulé (ms)",py:"aka.ticks_ms()",lua:"love.timer.getTime()*1000",cpp:"esp_timer_get_time()/1000"}
+    ]},
+    {cat:"Dessin",items:[
+      {b:"Couleur R V B",py:"aka.set_color(r,g,b)",lua:"love.graphics.setColor(r/255,g/255,b/255)",cpp:"gfx.setColor(gfx.makeColor(r,g,b))"},
+      {b:"Rectangle plein",py:"aka.fill_rect(x,y,w,h)",lua:'love.graphics.rectangle("fill",x,y,w,h)',cpp:"gfx.fillRect(x,y,w,h)"},
+      {b:"Rectangle contour",py:"aka.rect(x,y,w,h)",lua:'love.graphics.rectangle("line",x,y,w,h)',cpp:"gfx.drawRect(x,y,w,h)"},
+      {b:"Cercle plein",py:"aka.fill_circle(x,y,r)",lua:'love.graphics.circle("fill",x,y,r)',cpp:"gfx.fillCircle(x,y,r)"},
+      {b:"Cercle contour",py:"aka.circle(x,y,r)",lua:'love.graphics.circle("line",x,y,r)',cpp:"gfx.drawCircle(x,y,r)"},
+      {b:"Ligne",py:"aka.line(x1,y1,x2,y2)",lua:"love.graphics.line(x1,y1,x2,y2)",cpp:"gfx.drawLine(x1,y1,x2,y2)"},
+      {b:"Pixel",py:"aka.pixel(x,y)",lua:"love.graphics.points(x,y)",cpp:"gfx.drawPixel(x,y)"},
+      {b:"Texte (fixe)",py:'aka.text(x,y,"…")',lua:'love.graphics.print("…",x,y)',cpp:'gfx.move_cursor(x,y); gfx.print_str("…")'},
+      {b:"Afficher (valeur)",py:"aka.text(x,y,str(v))",lua:"love.graphics.print(tostring(v),x,y)",cpp:"gfx.print_str(aka_str(v).c_str())"}
+    ]},
+    {cat:"Entrées",items:[
+      {b:"Bouton (enfoncé/maintenu/relâché)",py:"(aka.pressed()/buttons()/released() & aka.A) != 0",lua:"love.keyboard.isDown('x') / édge",cpp:"(g_keys.pressed/raw/released & AKA_KEY_A) != 0"},
+      {b:"Manette axe",py:"aka.joystick(axe)",lua:"(axe via love)",cpp:"g_keys.joxx / g_keys.joxy"},
+      {b:"Vibrer N ms",py:"aka.vibrate(n)",lua:"— (non dispo en Love2D)",cpp:"g_audio_player.vibrator(n)"}
+    ]},
+    {cat:"Valeurs & Logique",items:[
+      {b:"Opération (+ − × ÷)",py:"a + b",lua:"a + b",cpp:"(a + b)"},
+      {b:"Modulo (reste)",py:"a % b",lua:"a % b",cpp:"(a % b)"},
+      {b:"Nombre aléatoire",py:"random.randint(a,b)",lua:"math.random(a,b)",cpp:"a + rand() % (b - a + 1)"},
+      {b:"Comparaison",py:"a == b / < / >",lua:"a == b / < / >",cpp:"(a == b) / < / >"},
+      {b:"Et / Ou / Non",py:"and / or / not",lua:"and / or / not",cpp:"&& / || / !"},
+      {b:"Si … alors / sinon",py:"if c: … else: …",lua:"if c then … else … end",cpp:"if (c) { … } else { … }"}
+    ]},
+    {cat:"Boucles",items:[
+      {b:"Répéter N fois",py:"for _ in range(n):",lua:"for i=1,n do",cpp:"for (int i=0;i<n;i++)"},
+      {b:"Compter de A à B",py:"for v in range(a,b+1):",lua:"for v=a,b do",cpp:"for (int v=a;v<=b;v++)"}
+    ]},
+    {cat:"Texte",items:[
+      {b:"Joindre",py:"a + b",lua:"a .. b",cpp:"aka_str(a) + aka_str(b)"},
+      {b:"Texte de (nombre→texte)",py:"str(v)",lua:"tostring(v)",cpp:"aka_str(v)"},
+      {b:"Nombre de (texte→nombre)",py:"int(v)",lua:"tonumber(v) or 0",cpp:"atoi(aka_str(v).c_str())"},
+      {b:"Longueur de",py:"len(v)",lua:"#v",cpp:"(int)aka_str(v).size()"},
+      {b:"Gauche / Droite",py:"v[:n] / v[-n:]",lua:"string.sub(v,1,n) / sub(v,-n)",cpp:"aka_left(v,n) / aka_right(v,n)"},
+      {b:"Milieu (dès position)",py:"v[p-1:p-1+n]",lua:"string.sub(v,p,p+n-1)",cpp:"aka_mid(v,p,n)"},
+      {b:"MAJUSCULES / minuscules",py:"v.upper() / v.lower()",lua:"string.upper(v) / string.lower(v)",cpp:"aka_upper(v) / aka_lower(v)"}
+    ]},
+    {cat:"Son & Musique",items:[
+      {b:"Jouer son … Hz",py:"aka.tone(f,ms)",lua:"aka_play_tone(f,ms)  (love.sound)",cpp:"s_tone_track.play_tone(f,1,ms,SQUARE)"},
+      {b:"Couper le son",py:"aka.no_tone()",lua:"love.audio.stop()",cpp:"s_tone_track.stop_playing()"},
+      {b:"Jouer note (nom+octave)",py:"aka.tone(freq,ms)",lua:"aka_play_tone(freq,ms)",cpp:"s_tone_track.play_tone(freq,1,ms,SQUARE)"},
+      {b:"Régler volume %",py:"aka.set_volume(p)",lua:"love.audio.setVolume(p/100)",cpp:"g_audio_player.set_master_volume(p*255/100)"}
+    ]},
+    {cat:"Fichiers / SD",items:[
+      {b:"Fichier existe",py:"aka.file_exists(p)",lua:"love.filesystem.getInfo(p) ~= nil",cpp:"access(p, F_OK) == 0"},
+      {b:"Lire le fichier",py:"aka.file_read(p)",lua:"love.filesystem.read(p)",cpp:"aka_read_file(p)"},
+      {b:"Écrire dans le fichier",py:"aka.file_write(p,d)",lua:"love.filesystem.write(p,d)",cpp:"fopen(p,\"w\"); fputs(d,f)"},
+      {b:"Liste des .py",py:"aka.list_py(d)",lua:"love.filesystem.getDirectoryItems(d)",cpp:"aka_list_py(d)"},
+      {b:"Créer le dossier",py:"aka.mkdir(p)",lua:"love.filesystem.createDirectory(p)",cpp:"mkdir(p, 0777)"}
+    ]},
+    {cat:"Système & Flash",items:[
+      {b:"Régler luminosité %",py:"aka.set_brightness(p)",lua:"— (non dispo)",cpp:"gfx.set_backlight_percent(p)"},
+      {b:"Niveau batterie",py:"aka.battery()",lua:"love.system.getPowerInfo()",cpp:"gb_ll_adc_read_vbatt_percent()"},
+      {b:"Capture d'écran",py:"aka.screenshot()",lua:"love.graphics.captureScreenshot(…)",cpp:"akaRuntime.takeScreenshot()"},
+      {b:"Éteindre la console",py:"aka.power_off()",lua:"— (non dispo)",cpp:"gb_ll_expander_power_off()"},
+      {b:"Retour au loader",py:"aka.loader()",lua:"— (non dispo)",cpp:"akaRuntime.returnToLoader()"},
+      {b:"Largeur / Hauteur écran",py:"aka.width() / aka.height()",lua:"love.graphics.getWidth() / getHeight()",cpp:"SCREEN_WIDTH / SCREEN_HEIGHT"}
+    ]},
+    {cat:"Variables & Fonctions",items:[
+      {b:"Mettre … à",py:"x = v",lua:"x = v",cpp:"x = v;  (type auto : int/std::string/vector)"},
+      {b:"Changer … de",py:"x += n",lua:"x = x + n",cpp:"x += n;"},
+      {b:"Définir une fonction",py:"def f(a): …",lua:"function f(a) … end",cpp:"void f(int a) { … }  (avant app_main)"}
+    ]}
+  ];
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function renderDoc(){
+    var q=(document.getElementById("docFilter").value||"").toLowerCase().trim();
+    var host=document.getElementById("docList"); host.innerHTML="";
+    DOCS.forEach(function(c){
+      var items=c.items.filter(function(it){ return !q || (c.cat+" "+it.b+" "+it.py+" "+it.lua+" "+it.cpp).toLowerCase().indexOf(q)>=0; });
+      if(!items.length) return;
+      var h=document.createElement("div"); h.className="doc-cat"; h.textContent=c.cat; host.appendChild(h);
+      items.forEach(function(it){
+        var d=document.createElement("div"); d.className="doc-item";
+        d.innerHTML='<div class="doc-b">'+esc(it.b)+'</div>'+
+          '<div class="doc-code"><span class="doc-lang py">PY</span><code>'+esc(it.py)+'</code></div>'+
+          '<div class="doc-code"><span class="doc-lang lua">LUA</span><code>'+esc(it.lua)+'</code></div>'+
+          '<div class="doc-code"><span class="doc-lang cpp">C++</span><code>'+esc(it.cpp)+'</code></div>';
+        host.appendChild(d);
+      });
+    });
+    if(!host.children.length){ host.innerHTML='<p class="tuto-sub">Aucun bloc ne correspond à « '+esc(q)+' ».</p>'; }
+  }
+  document.getElementById("docFilter").addEventListener("input",renderDoc);
 
   // ---- Persistance (confort par navigateur) --------------------------------
   var KEY="aka-blockly-ws";
@@ -990,6 +1105,10 @@
   function _clear(){ return {type:"aka_clear"}; }
   function _color(r,g,b){ return {type:"aka_set_color",fields:{R:r,G:g,B:b}}; }
   function _text(t,x,y){ return {type:"aka_text",fields:{TXT:t},inputs:{X:_num(x),Y:_num(y)}}; }
+  function _txt(s){ return {block:{type:"text",fields:{TEXT:s}}}; }
+  function _toText(v){ return {block:{type:"aka_to_text",inputs:{V:v}}}; }
+  function _join2(a,b){ return {block:{type:"text_join",extraState:{itemCount:2},inputs:{ADD0:a,ADD1:b}}}; }
+  function _textDyn(v,x,y){ return {type:"aka_text_dyn",inputs:{V:v,X:_num(x),Y:_num(y)}}; }
   function _rect(x,y,w,h){ return {type:"aka_fill_rect",inputs:{X:x,Y:y,W:w,H:h}}; }
   function _circle(x,y,r){ return {type:"aka_fill_circle",inputs:{X:x,Y:y,R:r}}; }
   function _set(n,v){ return {type:"variables_set",fields:{VAR:{id:_vid(n)}},inputs:{VALUE:v}}; }
@@ -1023,7 +1142,7 @@
       body.push(_if(_coll(_num(20),_getv("raquette_y"),_num(6),_num(40),_getv("balle_x"),_getv("balle_y"),_num(8),_num(8)),hit));
     }
     if(n>=5){
-      body.push(_text("Score:",8,12));
+      body.push(_textDyn(_join2(_txt("Score: "),_toText(_getv("score"))),8,12));
       var lost=[_set("balle_x",_num(160)),_set("balle_y",_num(120))];
       if(n>=6) lost.push(_vib(150));
       body.push(_if(_cmp(_getv("balle_x"),"LT",_num(0)),lost));
@@ -1090,12 +1209,12 @@
       instr:[
         {t:"<b>AU-DESSUS</b> de la boucle, crée « <b>score</b> » = <b>0</b>.",check:function(){return _any("variables_set",function(b){return _ni(b,"VALUE")===0&&!_inLoop(b);});}},
         {t:"À chaque renvoi réussi (dans la collision), augmente <b>score</b> de 1 (« <b>changer score de 1</b> »).",check:function(){return _changeVar("score");}},
-        {t:"Affiche un libellé « <b>Score:</b> » en haut à gauche.",check:function(){return _any("aka_text",function(b){return (_fv(b,"TXT")||"").toLowerCase().indexOf("score")>=0;});}},
+        {t:"Affiche le score <b>en direct</b> avec « <b>afficher (valeur)</b> » : « Score: » (bloc <b>joindre</b>) + « <b>texte de</b> » score.",check:function(){return blockPresent("aka_text_dyn");}},
         {t:"Si balle_x &lt; 0, replace la balle au centre (160, 120) — <b>comparaison sur balle_x</b>.",check:function(){return _cmpHasVar("balle_x");}}
       ],
-      blocks:[{n:"Texte (Score)",cat:"Dessin"},{n:"Changer variable de 1",cat:"Variables"},{n:"Comparaison",cat:"Logique"}],
-      hints:["Le bloc « texte » affiche un libellé fixe ; la valeur du score vit dans la variable <b>score</b> (affichage de la valeur à venir).","« Changer … de 1 » est dans <b>Variables</b>.","La balle sort à gauche quand balle_x &lt; 0."],
-      code:"score = 0\n# dans la collision : score += 1\n# dans la boucle :\n    aka.text(8, 12, \"Score:\")\n    if balle_x < 0:\n        balle_x = 160\n        balle_y = 120" },
+      blocks:[{n:"Afficher (valeur)",cat:"Dessin"},{n:"Joindre + texte de",cat:"Texte"},{n:"Changer variable de 1",cat:"Variables"}],
+      hints:["« afficher (valeur) » (catégorie <b>Dessin</b>) accepte un texte <b>calculé</b>, contrairement à « texte » qui est figé.","Construis « Score: » + le score avec « <b>joindre</b> » et « <b>texte de</b> » (catégorie <b>Texte</b>).","« Changer … de 1 » est dans <b>Variables</b> ; la balle sort à gauche quand balle_x &lt; 0."],
+      code:"score = 0\n# dans la collision : score += 1\n# dans la boucle :\n    aka.text(8, 12, \"Score: \" + str(score))\n    if balle_x < 0:\n        balle_x = 160\n        balle_y = 120" },
 
     { badge:"Fonctionnalités AKA", title:"Le vibreur haptique",
       objective:"Exploiter le vibreur de la console : faire vibrer quand la balle est perdue. (Les LEDs Neopixels ne sont pas encore montées sur la carte — cette étape se concentre sur le vibreur, qui existe.)",
