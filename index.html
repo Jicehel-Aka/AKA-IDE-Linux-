@@ -518,35 +518,48 @@
   function cval(b,n){ return cpp.valueToCode(b,n,CA)||'""'; }
   function cvar(b){ try{ var v=b.getField("VAR").getVariable(); var s=(v?v.name:"var").replace(/[^A-Za-z0-9_]/g,"_"); if(/^[0-9]/.test(s)) s="v_"+s; return s; }catch(e){ return "v"; } }
   cpp.scrub_=function(block,code,thisOnly){ var nx=block.nextConnection&&block.nextConnection.targetBlock(); return code+((thisOnly||!nx)?"":cpp.blockToCode(nx)); };
-  cpp.init=function(ws){ cpp._li=0; cpp._ws=ws; };
+  cpp.init=function(ws){ cpp._li=0; cpp._ws=ws; cpp._useTone=false; cpp._procs=[]; };
   cpp.finish=function(code){
+    var I=cpp.INDENT, tone=!!cpp._useTone;
     var decls="";
     try{
       var vars=cpp._ws.getAllVariables?cpp._ws.getAllVariables():(cpp._ws.getVariableMap&&cpp._ws.getVariableMap().getAllVariables());
       (vars||[]).forEach(function(v){ var s=v.name.replace(/[^A-Za-z0-9_]/g,"_"); if(/^[0-9]/.test(s)) s="v_"+s; decls+="static int "+s+" = 0;\n"; });
     }catch(e){}
-    var head=
-      "// Programme C++ natif Gamebuino AKA (généré par le Studio Blockly).\n"+
-      "// À placer dans un projet ESP-IDF utilisant le composant gamebuino.\n"+
+    var procs=(cpp._procs&&cpp._procs.length)?cpp._procs.join("\n")+"\n\n":"";
+    var help=
+      "// =============================================================================\n"+
+      "//  Programme C++ natif Gamebuino AKA — généré par le Studio Blockly.\n"+
+      "//  COMPILER (ESP-IDF) :\n"+
+      "//   1. Place ce fichier dans  main/main.cpp  d'un projet ESP-IDF.\n"+
+      "//   2. Ajoute les composants  gamebuino  et  aka_runtime  (dossier components/).\n"+
+      "//   3. main/CMakeLists.txt :\n"+
+      "//        idf_component_register(SRCS \"main.cpp\" REQUIRES gamebuino aka_runtime)\n"+
+      "//   4. Cible l'ESP32-S3 :  idf.py set-target esp32s3\n"+
+      "//   5. Compile et flashe :  idf.py build && idf.py -p <PORT> flash monitor\n"+
+      "//   6. Carte SD : garde le dossier AKA/ (langues) à la racine — voir le Toolkit AKA.\n"+
+      "//  Astuce : le plus simple est de partir du dépôt d'un jeu AKA existant et de\n"+
+      "//  remplacer son main.cpp par celui-ci.\n"+
+      "// =============================================================================\n\n";
+    var inc=
       "#include \"gb_core.h\"\n#include \"gb_graphics.h\"\n#include \"gb_audio_player.h\"\n#include \"gb_common.h\"\n"+
-      "#include \"gb_ll_adc.h\"\n#include \"gb_ll_expander.h\"\n#include \"core/input.h\"\n#include \"aka_runtime/aka_runtime.h\"\n"+
-      "#include <freertos/FreeRTOS.h>\n#include <freertos/task.h>\n#include \"esp_timer.h\"\n#include <cstdlib>\n#include <cstdio>\n#include <sys/stat.h>\n#include <unistd.h>\n\n"+
-      "gb_core         g_core;\ngb_graphics     gfx;\ngb_audio_player g_audio_player;\n\n"+
+      "#include \"gb_ll_adc.h\"\n#include \"gb_ll_expander.h\"\n"+
+      (tone?"#include \"gb_audio_track_tone.h\"\n":"")+
+      "#include \"core/input.h\"\n#include \"aka_runtime/aka_runtime.h\"\n"+
+      "#include <freertos/FreeRTOS.h>\n#include <freertos/task.h>\n#include \"esp_timer.h\"\n#include <cstdlib>\n#include <cstdio>\n#include <sys/stat.h>\n#include <unistd.h>\n\n";
+    var glob=
+      "gb_core         g_core;\ngb_graphics     gfx;\ngb_audio_player g_audio_player;\n"+
+      (tone?"static gb_audio_track_tone s_tone_track;   // piste pour aka.tone / notes\n":"")+"\n"+
       "// Masques boutons (valeurs AKA_KEY_* alignées sur EXPANDER_KEY_*)\n"+
       "static const uint32_t AKA_KEY_RUN=0x0002, AKA_KEY_MENU=0x0004, AKA_KEY_R1=0x0040, AKA_KEY_L1=0x0080,\n"+
       "  AKA_KEY_RIGHT=0x0100, AKA_KEY_UP=0x0200, AKA_KEY_DOWN=0x0400, AKA_KEY_LEFT=0x0800,\n"+
-      "  AKA_KEY_D=0x1000, AKA_KEY_B=0x2000, AKA_KEY_C=0x4000, AKA_KEY_A=0x8000;\n\n"+
-      (decls?decls+"\n":"");
-    var inner=cpp.prefixLines(code, cpp.INDENT);
-    return head+
-      "extern \"C\" void app_main(void) {\n"+
-      cpp.INDENT+"g_core.init();\n"+
-      cpp.INDENT+"gfx.set_backlight_percent(80);\n"+
-      cpp.INDENT+"gfx.set_refresh_rate(60);\n"+
-      cpp.INDENT+"input_init();\n"+
-      cpp.INDENT+"akaRuntime.begin(\"mon_jeu\");\n\n"+
-      inner+
-      "}\n";
+      "  AKA_KEY_D=0x1000, AKA_KEY_B=0x2000, AKA_KEY_C=0x4000, AKA_KEY_A=0x8000;\n\n";
+    var setup=
+      I+"g_core.init();\n"+I+"gfx.set_backlight_percent(80);\n"+I+"gfx.set_refresh_rate(60);\n"+
+      I+"input_init();\n"+I+"akaRuntime.begin(\"mon_jeu\");\n"+
+      (tone?I+"g_audio_player.add_track(&s_tone_track, 1.0f);\n":"")+"\n";
+    return help+inc+glob+(decls?decls+"\n":"")+procs+
+      "extern \"C\" void app_main(void) {\n"+setup+cpp.prefixLines(code,I)+"}\n";
   };
   var cf=cpp.forBlock;
   cf["aka_update_loop"]=function(b){ var body=cpp.statementToCode(b,"DO");
@@ -577,9 +590,9 @@
   cf["aka_set_volume"]=function(b){return "g_audio_player.set_master_volume((uint8_t)("+cnum(b,"P")+" * 255 / 100));\n";};
   cf["aka_width"]=function(){return ["SCREEN_WIDTH",CA];};
   cf["aka_height"]=function(){return ["SCREEN_HEIGHT",CA];};
-  cf["aka_tone"]=function(b){return "/* TODO son natif : gb_audio_track_tone + g_audio_player.add_track (cf. aka_hal.cpp) : "+cnum(b,"FREQ")+" Hz, "+cnum(b,"MS")+" ms */\n";};
-  cf["aka_no_tone"]=function(){return "/* TODO : couper la tonalite (gb_audio_track_tone) */\n";};
-  cf["aka_note"]=function(){return "/* TODO note : convertir en frequence puis jouer (gb_audio_track_tone) */\n";};
+  cf["aka_tone"]=function(b){ cpp._useTone=true; return "s_tone_track.play_tone((float)("+cnum(b,"FREQ")+"), 1.0f, (uint16_t)("+cnum(b,"MS")+"), gb_audio_track_tone::SQUARE);\n"; };
+  cf["aka_no_tone"]=function(){ cpp._useTone=true; return "s_tone_track.stop_playing();\n"; };
+  cf["aka_note"]=function(b){ cpp._useTone=true; return "s_tone_track.play_tone("+noteFreq(b)+".0f, 1.0f, (uint16_t)("+cnum(b,"MS")+"), gb_audio_track_tone::SQUARE);\n"; };
   cf["aka_file_exists"]=function(b){return ["(access("+cval(b,"PATH")+", F_OK) == 0)",CA];};
   cf["aka_file_read"]=function(b){return ["\"\" /* TODO lire "+cval(b,"PATH")+" en std::string (fopen) */",CA];};
   cf["aka_file_write"]=function(b){return "{ FILE *f = fopen("+cval(b,"PATH")+", \"w\"); if (f) { fputs("+cval(b,"DATA")+", f); fclose(f); } }\n";};
@@ -615,6 +628,33 @@
     return "for (int "+i+" = 0; "+i+" < "+r+"; "+i+"++) {\n"+body+"}\n"; };
   cf["controls_for"]=function(b){ var v=cvar(b),from=cpp.valueToCode(b,"FROM",CA)||"0",to=cpp.valueToCode(b,"TO",CA)||"0",by=cpp.valueToCode(b,"BY",CA)||"1",body=cpp.statementToCode(b,"DO");
     return "for (int "+v+" = "+from+"; "+v+" <= "+to+"; "+v+" += "+by+") {\n"+body+"}\n"; };
+  // Fonctions / procédures -> fonctions C++ libres (placées avant app_main)
+  function csan(s){ s=String(s||"fn").replace(/[^A-Za-z0-9_]/g,"_"); if(/^[0-9]/.test(s)) s="f_"+s; return s; }
+  function cargs(b){ var a=(b.getVars&&b.getVars())||b.arguments_||[]; return a.map(csan); }
+  function cdef(b,withRet){
+    var name=csan(b.getFieldValue("NAME")), ps=cargs(b).map(function(p){return "int "+p;}).join(", ");
+    var body=cpp.statementToCode(b,"STACK");
+    var ret=""; if(withRet){ var rv=cpp.valueToCode(b,"RETURN",CN)||"0"; ret=cpp.INDENT+"return "+rv+";\n"; }
+    cpp._procs.push((withRet?"int ":"void ")+name+"("+ps+") {\n"+body+ret+"}");
+    return null;   // la définition ne va pas dans app_main
+  }
+  cf["procedures_defnoreturn"]=function(b){ return cdef(b,false); };
+  cf["procedures_defreturn"]=function(b){ return cdef(b,true); };
+  cf["procedures_callnoreturn"]=function(b){
+    var name=csan(b.getFieldValue("NAME")), n=((b.getVars&&b.getVars())||b.arguments_||[]).length, args=[];
+    for(var i=0;i<n;i++) args.push(cpp.valueToCode(b,"ARG"+i,CN)||"0");
+    return name+"("+args.join(", ")+");\n";
+  };
+  cf["procedures_callreturn"]=function(b){
+    var name=csan(b.getFieldValue("NAME")), n=((b.getVars&&b.getVars())||b.arguments_||[]).length, args=[];
+    for(var i=0;i<n;i++) args.push(cpp.valueToCode(b,"ARG"+i,CN)||"0");
+    return [name+"("+args.join(", ")+")",CA];
+  };
+  cf["procedures_ifreturn"]=function(b){
+    var cond=cpp.valueToCode(b,"CONDITION",CN)||"false";
+    if(b.hasReturnValue_){ return "if ("+cond+") { return "+(cpp.valueToCode(b,"VALUE",CN)||"0")+"; }\n"; }
+    return "if ("+cond+") { return; }\n";
+  };
 
   // ---- Boîte à outils (avec valeurs par défaut en « ombres ») --------------
   function shadowNum(v){return {shadow:{type:"math_number",fields:{NUM:v}}};}
