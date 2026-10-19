@@ -66,7 +66,7 @@
                             <StackPanel Spacing="4">
                                 <TextBlock Text="💡 Bon à savoir" FontWeight="SemiBold" FontSize="11.5" Foreground="#fcd34d" />
                                 <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#cbd5e1"
-                                           Text="Le studio génère la vraie API de la console (module aka). Tu peux aussi afficher le code Love2D (Lua) en parallèle via les cases à cocher du studio." />
+                                           Text="Le studio génère la vraie API de la console en 3 langages — MicroPython (aka), Love2D (Lua) et C++ natif — affichables en parallèle via les cases à cocher. L'onglet « Doc » du studio liste tous les blocs et le code qu'ils produisent." />
                             </StackPanel>
                         </Border>
                         <Border Background="#1e293b" CornerRadius="6" Padding="10">
