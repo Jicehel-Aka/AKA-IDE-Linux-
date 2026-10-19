@@ -416,7 +416,17 @@
     {type:"aka_to_number",message0:"nombre de %1",args0:[{type:"input_value",name:"V",check:"String"}],
      output:"Number",inputsInline:true,colour:C_VALUE,tooltip:"Convertit un texte en nombre."},
     {type:"aka_text_length",message0:"longueur de %1",args0:[{type:"input_value",name:"V",check:"String"}],
-     output:"Number",inputsInline:true,colour:"#a5745b",tooltip:"Nombre de caractères du texte."}
+     output:"Number",inputsInline:true,colour:"#a5745b",tooltip:"Nombre de caractères du texte."},
+    {type:"aka_str_left",message0:"gauche de %1 sur %2 car.",args0:[{type:"input_value",name:"V",check:"String"},{type:"input_value",name:"N",check:"Number"}],
+     output:"String",inputsInline:true,colour:"#a5745b",tooltip:"Les N premiers caractères."},
+    {type:"aka_str_right",message0:"droite de %1 sur %2 car.",args0:[{type:"input_value",name:"V",check:"String"},{type:"input_value",name:"N",check:"Number"}],
+     output:"String",inputsInline:true,colour:"#a5745b",tooltip:"Les N derniers caractères."},
+    {type:"aka_str_mid",message0:"milieu de %1 dès la position %2 sur %3 car.",args0:[{type:"input_value",name:"V",check:"String"},{type:"input_value",name:"START",check:"Number"},{type:"input_value",name:"N",check:"Number"}],
+     output:"String",inputsInline:true,colour:"#a5745b",tooltip:"N caractères à partir de la position (1 = premier caractère)."},
+    {type:"aka_str_upper",message0:"MAJUSCULES de %1",args0:[{type:"input_value",name:"V",check:"String"}],
+     output:"String",inputsInline:true,colour:"#a5745b",tooltip:"Passe le texte en majuscules."},
+    {type:"aka_str_lower",message0:"minuscules de %1",args0:[{type:"input_value",name:"V",check:"String"}],
+     output:"String",inputsInline:true,colour:"#a5745b",tooltip:"Passe le texte en minuscules."}
   ]);
 
   // ---- Générateurs ---------------------------------------------------------
@@ -473,6 +483,11 @@
     pf["aka_to_text"]=function(b){return ["str("+(py.valueToCode(b,"V",PA)||"''")+")",PA];};
     pf["aka_to_number"]=function(b){return ["int("+(py.valueToCode(b,"V",PA)||"'0'")+")",PA];};
     pf["aka_text_length"]=function(b){return ["len("+(py.valueToCode(b,"V",PA)||"''")+")",PA];};
+    pf["aka_str_left"]=function(b){return ["str("+(py.valueToCode(b,"V",PA)||"''")+")[:"+num(py,b,"N",PA)+"]",PA];};
+    pf["aka_str_right"]=function(b){var n=num(py,b,"N",PA);return ["(str("+(py.valueToCode(b,"V",PA)||"''")+")[-("+n+"):] if ("+n+") else '')",PA];};
+    pf["aka_str_mid"]=function(b){var s=num(py,b,"START",PA);return ["str("+(py.valueToCode(b,"V",PA)||"''")+")[("+s+")-1:("+s+")-1+("+num(py,b,"N",PA)+")]",PA];};
+    pf["aka_str_upper"]=function(b){return ["str("+(py.valueToCode(b,"V",PA)||"''")+").upper()",PA];};
+    pf["aka_str_lower"]=function(b){return ["str("+(py.valueToCode(b,"V",PA)||"''")+").lower()",PA];};
   }
   if(lua){
     var LA=lua.ORDER_ATOMIC!=null?lua.ORDER_ATOMIC:0, LN=lua.ORDER_NONE!=null?lua.ORDER_NONE:99;
@@ -532,6 +547,11 @@
     lf["aka_to_text"]=function(b){return ["tostring("+(lua.valueToCode(b,"V",LA)||"''")+")",LA];};
     lf["aka_to_number"]=function(b){return ["(tonumber("+(lua.valueToCode(b,"V",LA)||"'0'")+") or 0)",LA];};
     lf["aka_text_length"]=function(b){return ["#("+(lua.valueToCode(b,"V",LA)||"''")+")",LA];};
+    lf["aka_str_left"]=function(b){return ["string.sub("+(lua.valueToCode(b,"V",LA)||"''")+", 1, "+num(lua,b,"N",LA)+")",LA];};
+    lf["aka_str_right"]=function(b){var n=num(lua,b,"N",LA);return ["(("+n+") > 0 and string.sub("+(lua.valueToCode(b,"V",LA)||"''")+", -("+n+")) or '')",LA];};
+    lf["aka_str_mid"]=function(b){var s=num(lua,b,"START",LA);return ["string.sub("+(lua.valueToCode(b,"V",LA)||"''")+", "+s+", ("+s+")+("+num(lua,b,"N",LA)+")-1)",LA];};
+    lf["aka_str_upper"]=function(b){return ["string.upper("+(lua.valueToCode(b,"V",LA)||"''")+")",LA];};
+    lf["aka_str_lower"]=function(b){return ["string.lower("+(lua.valueToCode(b,"V",LA)||"''")+")",LA];};
   }
 
   // ---- Générateur C++ natif (lib Gamebuino : gfx / g_audio_player / akaRuntime / g_keys) ----
@@ -547,14 +567,15 @@
   function cppValType(blk){
     if(!blk) return "int";
     var t=blk.type;
-    if(t==="text"||t==="text_join"||t==="aka_file_read"||t==="aka_to_text") return "string";
+    if(t==="text"||t==="text_join"||t==="aka_file_read"||t==="aka_to_text"||
+       t==="aka_str_left"||t==="aka_str_right"||t==="aka_str_mid"||t==="aka_str_upper"||t==="aka_str_lower") return "string";
     if(t==="aka_list_py") return "list";
     if(t==="variables_get") return (cpp._vt&&cpp._vt[cvar(blk)])||"int";
     return "int";
   }
   cpp.scrub_=function(block,code,thisOnly){ var nx=block.nextConnection&&block.nextConnection.targetBlock(); return code+((thisOnly||!nx)?"":cpp.blockToCode(nx)); };
   cpp.init=function(ws){
-    cpp._li=0; cpp._ws=ws; cpp._useTone=false; cpp._useReadFile=false; cpp._useListPy=false; cpp._useStr=false; cpp._procs=[];
+    cpp._li=0; cpp._ws=ws; cpp._useTone=false; cpp._useReadFile=false; cpp._useListPy=false; cpp._useStr=false; cpp._useStrOps=false; cpp._procs=[];
     // Inférence de types des variables (string / list / int) par point fixe.
     cpp._vt={};
     try{
@@ -574,7 +595,7 @@
     }catch(e){ cpp._vt={}; }
   };
   cpp.finish=function(code){
-    var I=cpp.INDENT, tone=!!cpp._useTone, rf=!!cpp._useReadFile, lp=!!cpp._useListPy, usestr=!!cpp._useStr;
+    var I=cpp.INDENT, tone=!!cpp._useTone, rf=!!cpp._useReadFile, lp=!!cpp._useListPy, usestr=!!cpp._useStr, usestrops=!!cpp._useStrOps;
     var decls="", hasStrVar=false, hasListVar=false;
     try{
       var vars=cpp._ws.getAllVariables?cpp._ws.getAllVariables():(cpp._ws.getVariableMap&&cpp._ws.getVariableMap().getAllVariables());
@@ -607,7 +628,7 @@
       (tone?"#include \"gb_audio_track_tone.h\"\n":"")+
       "#include \"core/input.h\"\n#include \"aka_runtime/aka_runtime.h\"\n"+
       "#include <freertos/FreeRTOS.h>\n#include <freertos/task.h>\n#include \"esp_timer.h\"\n#include <cstdlib>\n#include <cstdio>\n#include <sys/stat.h>\n#include <unistd.h>\n"+
-      (needStr?"#include <string>\n":"")+(rf?"#include <fstream>\n#include <iterator>\n":"")+(needVec?"#include <vector>\n":"")+(lp?"#include <dirent.h>\n#include <cstring>\n":"")+"\n";
+      (needStr?"#include <string>\n":"")+(rf?"#include <fstream>\n#include <iterator>\n":"")+(needVec?"#include <vector>\n":"")+(lp?"#include <dirent.h>\n#include <cstring>\n":"")+(usestrops?"#include <algorithm>\n#include <cctype>\n":"")+"\n";
     var helpers="";
     if(usestr){ helpers+=
       "// Conversion universelle vers texte (pour concaténation, affichage…).\n"+
@@ -615,6 +636,13 @@
       "static std::string aka_str(const char *s) { return std::string(s); }\n"+
       "static std::string aka_str(int n) { return std::to_string(n); }\n"+
       "static std::string aka_str(float f) { return std::to_string(f); }\n\n"; }
+    if(usestrops){ helpers+=
+      "// Opérations de texte : gauche / droite / milieu / casse.\n"+
+      "static std::string aka_left(const std::string &s, int n) { if (n < 0) n = 0; return s.substr(0, std::min((size_t)n, s.size())); }\n"+
+      "static std::string aka_right(const std::string &s, int n) { if (n < 0) n = 0; if ((size_t)n >= s.size()) return s; return s.substr(s.size() - (size_t)n); }\n"+
+      "static std::string aka_mid(const std::string &s, int start, int n) { if (start < 1) start = 1; if (n < 0) n = 0; size_t p = (size_t)(start - 1); if (p >= s.size()) return std::string(); return s.substr(p, std::min((size_t)n, s.size() - p)); }\n"+
+      "static std::string aka_upper(std::string s) { std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return (char)std::toupper(c); }); return s; }\n"+
+      "static std::string aka_lower(std::string s) { std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return (char)std::tolower(c); }); return s; }\n\n"; }
     if(rf){ helpers+=
       "// Lit tout le contenu d'un fichier (carte SD) dans une std::string.\n"+
       "static std::string aka_read_file(const char *path) {\n"+
@@ -683,6 +711,11 @@
   cf["aka_to_text"]=function(b){ cpp._useStr=true; return ["aka_str("+(cpp.valueToCode(b,"V",CA)||"0")+")",CA]; };
   cf["aka_to_number"]=function(b){ cpp._useStr=true; return ["atoi(aka_str("+(cpp.valueToCode(b,"V",CA)||'""')+").c_str())",CA]; };
   cf["aka_text_length"]=function(b){ cpp._useStr=true; return ["((int)aka_str("+(cpp.valueToCode(b,"V",CA)||'""')+").size())",CA]; };
+  cf["aka_str_left"]=function(b){ cpp._useStr=true; cpp._useStrOps=true; return ["aka_left(aka_str("+(cpp.valueToCode(b,"V",CA)||'""')+"), "+(cpp.valueToCode(b,"N",CA)||"0")+")",CA]; };
+  cf["aka_str_right"]=function(b){ cpp._useStr=true; cpp._useStrOps=true; return ["aka_right(aka_str("+(cpp.valueToCode(b,"V",CA)||'""')+"), "+(cpp.valueToCode(b,"N",CA)||"0")+")",CA]; };
+  cf["aka_str_mid"]=function(b){ cpp._useStr=true; cpp._useStrOps=true; return ["aka_mid(aka_str("+(cpp.valueToCode(b,"V",CA)||'""')+"), "+(cpp.valueToCode(b,"START",CA)||"1")+", "+(cpp.valueToCode(b,"N",CA)||"0")+")",CA]; };
+  cf["aka_str_upper"]=function(b){ cpp._useStr=true; cpp._useStrOps=true; return ["aka_upper(aka_str("+(cpp.valueToCode(b,"V",CA)||'""')+"))",CA]; };
+  cf["aka_str_lower"]=function(b){ cpp._useStr=true; cpp._useStrOps=true; return ["aka_lower(aka_str("+(cpp.valueToCode(b,"V",CA)||'""')+"))",CA]; };
   cf["aka_tone"]=function(b){ cpp._useTone=true; return "s_tone_track.play_tone((float)("+cnum(b,"FREQ")+"), 1.0f, (uint16_t)("+cnum(b,"MS")+"), gb_audio_track_tone::SQUARE);\n"; };
   cf["aka_no_tone"]=function(){ cpp._useTone=true; return "s_tone_track.stop_playing();\n"; };
   cf["aka_note"]=function(b){ cpp._useTone=true; return "s_tone_track.play_tone("+noteFreq(b)+".0f, 1.0f, (uint16_t)("+cnum(b,"MS")+"), gb_audio_track_tone::SQUARE);\n"; };
@@ -795,7 +828,12 @@
       {kind:"block",type:"text_join",inputs:{ADD0:shadowTxt("Score: "),ADD1:shadowTxt("0")}},
       {kind:"block",type:"aka_to_text",inputs:{V:shadowNum(0)}},
       {kind:"block",type:"aka_to_number",inputs:{V:shadowTxt("0")}},
-      {kind:"block",type:"aka_text_length",inputs:{V:shadowTxt("texte")}}]},
+      {kind:"block",type:"aka_text_length",inputs:{V:shadowTxt("texte")}},
+      {kind:"block",type:"aka_str_left",inputs:{V:shadowTxt("Bonjour"),N:shadowNum(3)}},
+      {kind:"block",type:"aka_str_right",inputs:{V:shadowTxt("Bonjour"),N:shadowNum(3)}},
+      {kind:"block",type:"aka_str_mid",inputs:{V:shadowTxt("Bonjour"),START:shadowNum(2),N:shadowNum(3)}},
+      {kind:"block",type:"aka_str_upper",inputs:{V:shadowTxt("texte")}},
+      {kind:"block",type:"aka_str_lower",inputs:{V:shadowTxt("TEXTE")}}]},
     {kind:"category",name:"Son & Musique",colour:C_SOUND,contents:[
       {kind:"block",type:"aka_tone",inputs:{FREQ:shadowNum(440),MS:shadowNum(200)}},
       {kind:"block",type:"aka_no_tone"},
