@@ -195,10 +195,11 @@
           <pre id="codeCpp" tabindex="0">… assemble des blocs pour voir le code …</pre>
         </div>
         <p class="foot-note">Le code utilise la <b>vraie API</b> de la console : module <code>aka</code> en MicroPython,
-        <code>love.graphics</code>/<code>love.keyboard</code> en Lua (Love2D), et la lib native
-        (<code>gfx</code>/<code>g_audio_player</code>/<code>akaRuntime</code>) en <b>C++</b>. Le C++ généré est un
-        programme ESP-IDF complet (à placer dans un projet utilisant le composant <code>gamebuino</code>) ; quelques
-        blocs (son, lecture de fichiers) y sont marqués <code>TODO</code> car ils demandent du câblage natif.</p>
+        <code>love.graphics</code>/<code>love.audio</code> en Lua (Love2D), et la lib native
+        (<code>gfx</code>/<code>g_audio_player</code>/<code>akaRuntime</code>) en <b>C++</b> — son, carte SD et lecture
+        de fichiers compris. Le C++ généré est un programme ESP-IDF complet (à placer dans un projet utilisant le
+        composant <code>gamebuino</code>) ; les variables y sont typées <code>int</code>, donc stocke le résultat d'une
+        lecture de fichier (texte) directement plutôt que dans une variable.</p>
       </section>
 
       <section class="pane" id="paneTuto" role="tabpanel" hidden>
@@ -497,12 +498,24 @@
     lf["aka_battery"]=function(){return ["(select(2, love.system.getPowerInfo()) or 100)",LA];};
     lf["aka_power_off"]=function(){return "love.event.quit()\n";};
     lf["aka_loader"]=function(){return "love.event.quit()\n";};
-    lf["aka_tone"]=function(){return "-- tone : créez une source audio avec love.audio\n";};
+    function luaToneFn(){ return lua.provideFunction_("aka_play_tone",[
+      "function "+lua.FUNCTION_NAME_PLACEHOLDER_+"(freq, ms)",
+      "  local rate = 44100",
+      "  local n = math.max(1, math.floor(rate * ms / 1000))",
+      "  local sd = love.sound.newSoundData(n, rate, 16, 1)",
+      "  for i = 0, n - 1 do",
+      "    local v = 0.4",
+      "    if math.sin(2 * math.pi * freq * (i / rate)) < 0 then v = -0.4 end",
+      "    sd:setSample(i, v)",
+      "  end",
+      "  love.audio.play(love.audio.newSource(sd, \"static\"))",
+      "end"]); }
+    lf["aka_tone"]=function(b){return luaToneFn()+"("+num(lua,b,"FREQ",LA)+", "+num(lua,b,"MS",LA)+")\n";};
     lf["aka_no_tone"]=function(){return "love.audio.stop()\n";};
     lf["aka_set_volume"]=function(b){return "love.audio.setVolume(("+num(lua,b,"P",LA)+") / 100)\n";};
     lf["aka_collide"]=function(b){return [collideExpr(lua,b,LA),LN];};
     lf["aka_clamp"]=function(b){return ["math.max("+num(lua,b,"MIN",LA)+", math.min("+num(lua,b,"MAX",LA)+", "+num(lua,b,"V",LA)+"))",LA];};
-    lf["aka_note"]=function(){return "-- note : en Love2D, générez une source audio (love.audio)\n";};
+    lf["aka_note"]=function(b){return luaToneFn()+"("+noteFreq(b)+", "+num(lua,b,"MS",LA)+")\n";};
     lf["aka_wait_frames"]=function(){return "-- attendre N images : géré par la boucle love.update\n";};
     lf["aka_width"]=function(){return ["love.graphics.getWidth()",LA];};
     lf["aka_height"]=function(){return ["love.graphics.getHeight()",LA];};
@@ -518,9 +531,9 @@
   function cval(b,n){ return cpp.valueToCode(b,n,CA)||'""'; }
   function cvar(b){ try{ var v=b.getField("VAR").getVariable(); var s=(v?v.name:"var").replace(/[^A-Za-z0-9_]/g,"_"); if(/^[0-9]/.test(s)) s="v_"+s; return s; }catch(e){ return "v"; } }
   cpp.scrub_=function(block,code,thisOnly){ var nx=block.nextConnection&&block.nextConnection.targetBlock(); return code+((thisOnly||!nx)?"":cpp.blockToCode(nx)); };
-  cpp.init=function(ws){ cpp._li=0; cpp._ws=ws; cpp._useTone=false; cpp._procs=[]; };
+  cpp.init=function(ws){ cpp._li=0; cpp._ws=ws; cpp._useTone=false; cpp._useReadFile=false; cpp._useListPy=false; cpp._procs=[]; };
   cpp.finish=function(code){
-    var I=cpp.INDENT, tone=!!cpp._useTone;
+    var I=cpp.INDENT, tone=!!cpp._useTone, rf=!!cpp._useReadFile, lp=!!cpp._useListPy;
     var decls="";
     try{
       var vars=cpp._ws.getAllVariables?cpp._ws.getAllVariables():(cpp._ws.getVariableMap&&cpp._ws.getVariableMap().getAllVariables());
@@ -546,7 +559,31 @@
       "#include \"gb_ll_adc.h\"\n#include \"gb_ll_expander.h\"\n"+
       (tone?"#include \"gb_audio_track_tone.h\"\n":"")+
       "#include \"core/input.h\"\n#include \"aka_runtime/aka_runtime.h\"\n"+
-      "#include <freertos/FreeRTOS.h>\n#include <freertos/task.h>\n#include \"esp_timer.h\"\n#include <cstdlib>\n#include <cstdio>\n#include <sys/stat.h>\n#include <unistd.h>\n\n";
+      "#include <freertos/FreeRTOS.h>\n#include <freertos/task.h>\n#include \"esp_timer.h\"\n#include <cstdlib>\n#include <cstdio>\n#include <sys/stat.h>\n#include <unistd.h>\n"+
+      ((rf||lp)?"#include <string>\n":"")+(rf?"#include <fstream>\n#include <iterator>\n":"")+(lp?"#include <vector>\n#include <dirent.h>\n#include <cstring>\n":"")+"\n";
+    var helpers="";
+    if(rf){ helpers+=
+      "// Lit tout le contenu d'un fichier (carte SD) dans une std::string.\n"+
+      "static std::string aka_read_file(const char *path) {\n"+
+      "    std::ifstream f(path);\n"+
+      "    if (!f) return std::string();\n"+
+      "    return std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());\n"+
+      "}\n\n"; }
+    if(lp){ helpers+=
+      "// Liste les fichiers .py d'un dossier de la carte SD.\n"+
+      "static std::vector<std::string> aka_list_py(const char *dir) {\n"+
+      "    std::vector<std::string> out;\n"+
+      "    DIR *d = opendir(dir);\n"+
+      "    if (d) {\n"+
+      "        struct dirent *e;\n"+
+      "        while ((e = readdir(d)) != NULL) {\n"+
+      "            size_t len = strlen(e->d_name);\n"+
+      "            if (len > 3 && strcmp(e->d_name + len - 3, \".py\") == 0) out.push_back(std::string(e->d_name));\n"+
+      "        }\n"+
+      "        closedir(d);\n"+
+      "    }\n"+
+      "    return out;\n"+
+      "}\n\n"; }
     var glob=
       "gb_core         g_core;\ngb_graphics     gfx;\ngb_audio_player g_audio_player;\n"+
       (tone?"static gb_audio_track_tone s_tone_track;   // piste pour aka.tone / notes\n":"")+"\n"+
@@ -558,7 +595,7 @@
       I+"g_core.init();\n"+I+"gfx.set_backlight_percent(80);\n"+I+"gfx.set_refresh_rate(60);\n"+
       I+"input_init();\n"+I+"akaRuntime.begin(\"mon_jeu\");\n"+
       (tone?I+"g_audio_player.add_track(&s_tone_track, 1.0f);\n":"")+"\n";
-    return help+inc+glob+(decls?decls+"\n":"")+procs+
+    return help+inc+glob+helpers+(decls?decls+"\n":"")+procs+
       "extern \"C\" void app_main(void) {\n"+setup+cpp.prefixLines(code,I)+"}\n";
   };
   var cf=cpp.forBlock;
@@ -594,9 +631,9 @@
   cf["aka_no_tone"]=function(){ cpp._useTone=true; return "s_tone_track.stop_playing();\n"; };
   cf["aka_note"]=function(b){ cpp._useTone=true; return "s_tone_track.play_tone("+noteFreq(b)+".0f, 1.0f, (uint16_t)("+cnum(b,"MS")+"), gb_audio_track_tone::SQUARE);\n"; };
   cf["aka_file_exists"]=function(b){return ["(access("+cval(b,"PATH")+", F_OK) == 0)",CA];};
-  cf["aka_file_read"]=function(b){return ["\"\" /* TODO lire "+cval(b,"PATH")+" en std::string (fopen) */",CA];};
+  cf["aka_file_read"]=function(b){ cpp._useReadFile=true; return ["aka_read_file("+cval(b,"PATH")+")",CA]; };
   cf["aka_file_write"]=function(b){return "{ FILE *f = fopen("+cval(b,"PATH")+", \"w\"); if (f) { fputs("+cval(b,"DATA")+", f); fclose(f); } }\n";};
-  cf["aka_list_py"]=function(){return ["nullptr /* TODO lister les .py (opendir/readdir) */",CA];};
+  cf["aka_list_py"]=function(b){ cpp._useListPy=true; return ["aka_list_py("+cval(b,"DIR")+")",CA]; };
   cf["aka_mkdir"]=function(b){return "mkdir("+cval(b,"PATH")+", 0777);\n";};
   cf["aka_collide"]=function(b){ var ax=cnum(b,"AX"),ay=cnum(b,"AY"),aw=cnum(b,"AW"),ah=cnum(b,"AH"),bx=cnum(b,"BX"),by=cnum(b,"BY"),bw=cnum(b,"BW"),bh=cnum(b,"BH");
     return ["("+ax+" < "+bx+" + "+bw+" && "+ax+" + "+aw+" > "+bx+" && "+ay+" < "+by+" + "+bh+" && "+ay+" + "+ah+" > "+by+")",CA]; };
